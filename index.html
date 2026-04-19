@@ -177,6 +177,7 @@
         <option>Claudio Leiva</option>
         <option>Patricia Muñoz</option>
         <option>Martin Diaz</option>
+        <option>Jose Halty</option>
       </select>
 
       <div id="role-section" style="display:none;margin-bottom:16px">
@@ -280,7 +281,7 @@ const USUARIOS = {
 const ESTADOS_HITO   = ["A tiempo","En Riesgo","Retrasado","Completado"];
 const ESTADOS_ACCION = ["En curso","Bloqueada","Pendiente","Completada"];
 const PRIORIDADES    = ["Alta","Media","Baja"];
-const RESPONSABLES   = ["Paula Herrera","Claudio Leiva","Patricia Muñoz","Martin Diaz","Juan Pablo Torres","Carla Vergara","Pilar Espinoza","Jorge Bravo","Rodrigo Escobar"];
+const RESPONSABLES   = ["Paula Herrera","Claudio Leiva","Patricia Muñoz","Martin Diaz","Juan Pablo Torres","Carla Vergara","Pilar Espinoza","Jorge Bravo","Rodrigo Escobar","Jose Halty"];
 
 // ── ESTADO ────────────────────────────────────────────
 let STATE = {
@@ -372,7 +373,7 @@ function showMain() {
 // ── FIREBASE DB ───────────────────────────────────────
 function loadData() {
   // Version check — si cambia fuerza recarga de datos demo
-  const VERSION = "v5";
+  const VERSION = "v8";
   const savedV = localStorage.getItem("myh-version");
   if (savedV !== VERSION) {
     localStorage.clear();
