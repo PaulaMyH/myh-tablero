@@ -372,11 +372,14 @@ function showMain() {
 
 // ── FIREBASE DB ───────────────────────────────────────
 function loadData() {
-  // Version check — si cambia fuerza recarga de datos demo
-  const VERSION = "v8";
+  // Version check — si cambia FORZAMOS recarga de datos demo (sin borrar user)
+  const VERSION = "v9";
   const savedV = localStorage.getItem("myh-version");
   if (savedV !== VERSION) {
-    localStorage.clear();
+    // Forzar recarga — eliminar solo los datos del tablero
+    localStorage.removeItem("myh-hitos");
+    localStorage.removeItem("myh-acciones");
+    localStorage.removeItem("myh-adminTareas");
     localStorage.setItem("myh-version", VERSION);
   }
   const h = localStorage.getItem("myh-hitos");
