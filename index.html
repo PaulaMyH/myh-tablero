@@ -24,6 +24,32 @@
     }
     html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);-webkit-tap-highlight-color:transparent}
     #app{max-width:480px;margin:0 auto;min-height:100vh}
+    /* ── VISTA PC (≥900px) ─────────────────────────── */
+    @media (min-width: 900px) {
+      #app{max-width:1400px;display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr}
+      #header{grid-column:1/3;padding:20px 32px}
+      #tab-bar{position:relative;flex-direction:column;width:240px;max-width:240px;height:auto;border-top:none;border-right:1px solid var(--border);box-shadow:none;padding:20px 0;left:0;transform:none;background:#fafbfc}
+      .tab-btn{padding:14px 20px;flex-direction:row;justify-content:flex-start;gap:14px;border-radius:0;border-left:3px solid transparent}
+      .tab-btn.active{background:var(--indigo-l);border-left-color:var(--indigo)}
+      .tab-icon{font-size:20px}
+      .tab-label{font-size:14px;text-transform:none;letter-spacing:0}
+      #content{padding:32px 32px 32px 32px;overflow-y:auto}
+      .kpi-grid{grid-template-columns:repeat(6,1fr)!important}
+      .modal-overlay{align-items:center!important}
+      .modal-box{max-width:560px!important;border-radius:16px!important;padding:32px!important;max-height:85vh}
+      /* Tabla en hitos */
+      .pc-table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+      .pc-table th{background:#f8fafc;padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+      .pc-table td{padding:14px 16px;border-bottom:1px solid #f1f5f9;font-size:13px;color:var(--text);vertical-align:middle}
+      .pc-table tr:hover{background:#fafbfc;cursor:pointer}
+      .pc-table tr:last-child td{border-bottom:none}
+      /* Botones más grandes en PC */
+      .btn-add{padding:12px 20px;font-size:14px;width:auto;display:inline-block;margin-bottom:20px}
+      /* Cards de proyecto en grid */
+      .pc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+      .pc-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+      .alert-bar{margin-top:0!important}
+    }
 
     /* LOGIN */
     #login{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px 24px;background:var(--navy)}
@@ -373,7 +399,7 @@ function showMain() {
 // ── FIREBASE DB ───────────────────────────────────────
 function loadData() {
   // Version check — si cambia FORZAMOS recarga de datos demo (sin borrar user)
-  const VERSION = "v9";
+  const VERSION = "v10";
   const savedV = localStorage.getItem("myh-version");
   if (savedV !== VERSION) {
     // Forzar recarga — eliminar solo los datos del tablero
@@ -504,15 +530,50 @@ function renderResumen() {
 function renderHitos() {
   const filtros=["Todos","Retrasado","En Riesgo","A tiempo","Completado"];
   const lista=STATE.filtroH==="Todos"?STATE.hitos:STATE.hitos.filter(h=>h.estado===STATE.filtroH);
-  const porProy={};
-  lista.forEach(h=>{if(!porProy[h.proyecto])porProy[h.proyecto]=[];porProy[h.proyecto].push(h);});
-  const canEdit = true;
-  return `
-    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px">
+  const isPC = window.innerWidth >= 900;
+  
+  const filtrosHTML = `
+    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;flex-wrap:wrap">
       ${filtros.map(f=>`<button onclick="setFiltroH('${f}')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;background:${STATE.filtroH===f?"#1e293b":"#f1f5f9"};color:${STATE.filtroH===f?"#fff":"#64748b"}">${f}</button>`).join("")}
     </div>
-    ${canEdit?`<button onclick="openNuevoHito()" class="btn-add btn-add-h">＋ Agregar nuevo hito</button>`:""}
-    ${Object.entries(porProy).map(([proy,items])=>`
+    <button onclick="openNuevoHito()" class="btn-add btn-add-h">＋ Agregar nuevo hito</button>`;
+  
+  if (isPC) {
+    // VISTA TABLA en PC
+    if (lista.length === 0) {
+      return filtrosHTML + `<div style="text-align:center;padding:60px 20px;color:var(--muted)"><p style="font-size:16px;font-weight:600;margin-bottom:8px">Sin hitos aún</p><p style="font-size:13px">Agrega tu primer hito con el botón de arriba</p></div>`;
+    }
+    return filtrosHTML + `
+      <table class="pc-table">
+        <thead>
+          <tr>
+            <th>Proyecto</th>
+            <th>Hito</th>
+            <th>Responsable</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Comentario</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${lista.map(h=>`
+            <tr onclick="openEditHito('${h.id}')">
+              <td><strong>${h.proyecto}</strong><br><span style="font-size:10px;color:var(--muted)">${h.clasificacion||""} · ${h.etapa||""}</span></td>
+              <td>${h.hito}</td>
+              <td>${h.responsable}</td>
+              <td>${h.fecha||"—"}</td>
+              <td>${badge(h.estado)}</td>
+              <td style="font-size:11px;color:var(--sub);max-width:200px">${h.comentario||"—"}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>`;
+  }
+  
+  // VISTA MÓVIL (cards agrupadas por proyecto)
+  const porProy={};
+  lista.forEach(h=>{if(!porProy[h.proyecto])porProy[h.proyecto]=[];porProy[h.proyecto].push(h);});
+  return filtrosHTML + (lista.length===0?`<div style="text-align:center;padding:40px 20px;color:var(--muted)"><p style="font-size:14px">Sin hitos aún</p></div>`:"") +
+    Object.entries(porProy).map(([proy,items])=>`
       <div class="card">
         <div class="card-header">
           <div>
@@ -527,25 +588,67 @@ function renderHitos() {
             <div class="row-meta"><span>📅 ${h.fecha||"—"}</span><span>👤 ${h.responsable}</span>${h.comentario?`<span>💬 ${h.comentario}</span>`:""}</div>
             <span class="row-tap">Toca para editar →</span>
           </button>`).join("")}
-      </div>`).join("")}`;
+      </div>`).join("");
 }
 
 function renderAcciones() {
   const filtros=["Todos","Bloqueada","En curso","Pendiente","Completada"];
   const lista=STATE.filtroA==="Todos"?STATE.acciones:STATE.acciones.filter(a=>a.estado===STATE.filtroA);
-  return `
-    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px">
+  const isPC = window.innerWidth >= 900;
+  
+  const topHTML = `
+    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;flex-wrap:wrap">
       ${filtros.map(f=>`<button onclick="setFiltroA('${f}')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;background:${STATE.filtroA===f?"#1e293b":"#f1f5f9"};color:${STATE.filtroA===f?"#fff":"#64748b"}">${f}</button>`).join("")}
     </div>
-    <button onclick="openNuevaAccion()" class="btn-add btn-add-a">＋ Agregar nueva acción</button>
-    ${lista.map(a=>`
+    <button onclick="openNuevaAccion()" class="btn-add btn-add-a">＋ Agregar nueva acción</button>`;
+  
+  if (isPC) {
+    // KANBAN en PC
+    const cols = [
+      {label:"En curso",   estado:"En curso",   color:"#3b82f6", bg:"#dbeafe"},
+      {label:"Bloqueada",  estado:"Bloqueada",  color:"#ec4899", bg:"#fce7f3"},
+      {label:"Pendiente",  estado:"Pendiente",  color:"#94a3b8", bg:"#f3f4f6"},
+      {label:"Completada", estado:"Completada", color:"#0ea5e9", bg:"#e0f2fe"},
+    ];
+    if (lista.length === 0) {
+      return topHTML + `<div style="text-align:center;padding:60px 20px;color:var(--muted)"><p style="font-size:16px;font-weight:600;margin-bottom:8px">Sin acciones aún</p><p style="font-size:13px">Agrega tu primera acción con el botón de arriba</p></div>`;
+    }
+    return topHTML + `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+        ${cols.map(col => {
+          const items = lista.filter(a => a.estado === col.estado);
+          return `
+            <div style="background:#fafbfc;border-radius:12px;padding:14px;min-height:300px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid ${col.color}">
+                <span style="font-size:12px;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.05em">${col.label}</span>
+                <span style="font-size:11px;color:var(--muted);background:#fff;padding:2px 8px;border-radius:10px;font-weight:600">${items.length}</span>
+              </div>
+              ${items.map(a => `
+                <div onclick="openEditAccion('${a.id}')" style="background:#fff;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer;border-left:3px solid ${col.color}">
+                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.4">${a.accion}</div>
+                  <div style="font-size:10px;color:var(--indigo);background:var(--indigo-l);padding:2px 6px;border-radius:6px;display:inline-block;margin-bottom:6px">${a.proyecto}</div>
+                  <div style="font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap">
+                    <span>📅 ${a.fecha||"—"}</span>
+                    <span>👤 ${a.responsable}</span>
+                  </div>
+                  ${a.comentario?`<div style="margin-top:8px;font-size:11px;color:#713f12;background:#fef9c3;padding:6px 8px;border-radius:6px">⚠️ ${a.comentario}</div>`:""}
+                </div>`).join("")}
+              ${items.length===0?`<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--muted)">— vacío —</div>`:""}
+            </div>`;
+        }).join("")}
+      </div>`;
+  }
+  
+  // VISTA MÓVIL
+  return topHTML + (lista.length===0?`<div style="text-align:center;padding:40px 20px;color:var(--muted)"><p style="font-size:14px">Sin acciones aún</p></div>`:"") +
+    lista.map(a=>`
       <button onclick="openEditAccion('${a.id}')" style="display:block;width:100%;text-align:left;background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:none;cursor:pointer">
         <div class="row-top"><span class="row-name" style="font-weight:600">${a.accion}</span>${badge(a.estado)}</div>
         <span class="proy-chip">${a.proyecto}</span>
         <div class="row-meta"><span>📅 ${a.fecha||"—"}</span><span>👤 ${a.responsable}</span></div>
         ${a.comentario?`<div class="row-comment">⚠️ ${a.comentario}</div>`:""}
         <span class="row-tap">Toca para editar →</span>
-      </button>`).join("")}`;
+      </button>`).join("");
 }
 
 function renderAdmin() {
@@ -775,18 +878,11 @@ window.setFiltroH = function(f){STATE.filtroH=f;render();};
 window.setFiltroA = function(f){STATE.filtroA=f;render();};
 
 // ── DATOS DEMO ────────────────────────────────────────
-const HITOS_DEMO = [
-  {id:"h1",proyecto:"Jardin Kimpelu",clasificacion:"Público",etapa:"Etapa V",hito:"Obtención aprobación sanitaria",fecha:"30/10/2025",responsable:"Juan Pablo Torres",estado:"En Riesgo",prioridad:"Alta",comentario:""},
-  {id:"h2",proyecto:"Jardin We Choyun",clasificacion:"Público",etapa:"Etapa V",hito:"Obtención Permiso de Edificación",fecha:"—",responsable:"Paula Herrera",estado:"Retrasado",prioridad:"Alta",comentario:""},
-  {id:"h3",proyecto:"Escuela La Guardia Colbun",clasificacion:"Público",etapa:"Proyecto",hito:"Respuestas OBS Secreduc",fecha:"31/10/2025",responsable:"Paula Herrera",estado:"En Riesgo",prioridad:"Alta",comentario:""},
-  {id:"h4",proyecto:"Casa Duglery",clasificacion:"Privado",etapa:"Proyecto",hito:"Ingreso recepción",fecha:"22/10/2025",responsable:"Paula Herrera",estado:"Retrasado",prioridad:"Alta",comentario:""},
-];
-const ACCIONES_DEMO = [
-  {id:"a1",proyecto:"Jardin We Choyun",accion:"Aprobación permiso de edificación",responsable:"Paula Herrera",fecha:"21/11/2025",estado:"En curso",prioridad:"Alta",comentario:"A la espera de proyecto sanitario aprobado"},
-  {id:"a2",proyecto:"Escuela La Guardia Colbun",accion:"Aprobación permiso edificación - Contactar DOM",responsable:"Paula Herrera",fecha:"02/01/2026",estado:"Pendiente",prioridad:"Alta",comentario:"Contactar a DOM por ampliación de plazo"},
-];
+const HITOS_DEMO = [];
+const ACCIONES_DEMO = [];
 
 // ── INIT ──────────────────────────────────────────────
+window.addEventListener("resize", () => { if(STATE.user) render(); });
 window.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => {
     document.getElementById("loading").style.display="none";
