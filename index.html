@@ -8,6 +8,11 @@
   <meta name="apple-mobile-web-app-title" content="MyH Tablero"/>
   <title>MyH Arquitectos — Tablero</title>
   <link rel="manifest" href="manifest.json"/>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -24,6 +29,7 @@
     }
     html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);-webkit-tap-highlight-color:transparent}
     #app{max-width:480px;margin:0 auto;min-height:100vh}
+    
     /* ── VISTA PC (≥900px) ─────────────────────────── */
     @media (min-width: 900px) {
       #app{max-width:1400px;display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto 1fr}
@@ -39,7 +45,7 @@
       .modal-box{max-width:560px!important;border-radius:16px!important;padding:32px!important;max-height:85vh}
       /* Tabla en hitos */
       .pc-table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-      .pc-table th{background:#f8fafc;padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+      .pc-table th{background:#f8fafc;padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border}}
       .pc-table td{padding:14px 16px;border-bottom:1px solid #f1f5f9;font-size:13px;color:var(--text);vertical-align:middle}
       .pc-table tr:hover{background:#fafbfc;cursor:pointer}
       .pc-table tr:last-child td{border-bottom:none}
@@ -98,807 +104,1187 @@
     /* CONTENT */
     #content{padding:16px 14px 90px}
 
-    /* CARDS */
-    .card{background:var(--card);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;margin-bottom:12px}
-    .card-header{padding:12px 16px;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center}
-    .card-title{font-size:14px;font-weight:700;color:var(--navy)}
-    .card-row{padding:12px 16px;border-bottom:1px solid #f8fafc;cursor:pointer;width:100%;background:none;border-left:none;border-right:none;border-top:none;text-align:left;display:block}
-    .card-row:last-child{border-bottom:none}
-    .card-row:active{background:#f8fafc}
-    .row-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
-    .row-name{font-size:13px;color:var(--navy);line-height:1.4;flex:1}
-    .row-meta{display:flex;gap:10px;flex-wrap:wrap}
-    .row-meta span{font-size:11px;color:var(--muted)}
-    .row-tap{font-size:11px;color:#c7d2fe;margin-top:4px;display:block}
-    .row-comment{margin-top:8px;padding:7px 10px;background:var(--yellow-l);border-radius:8px;font-size:11px;color:#713f12}
+    /* KPIs */
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+    .kpi-card{background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+    .kpi-label{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+    .kpi-value{font-size:22px;font-weight:800;color:var(--text)}
+    .kpi-subtitle{font-size:10px;color:var(--muted);margin-top:2px}
 
-    /* BADGES */
-    .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
-    .badge-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
-    .b-atiempo{background:var(--green-l);color:#166534}.b-atiempo .badge-dot{background:var(--green)}
-    .b-riesgo{background:var(--yellow-l);color:#854d0e}.b-riesgo .badge-dot{background:var(--yellow)}
-    .b-retrasado{background:var(--red-l);color:#991b1b}.b-retrasado .badge-dot{background:var(--red)}
-    .b-completado{background:var(--blue-l);color:#1e40af}.b-completado .badge-dot{background:var(--blue)}
-    .b-encurso{background:var(--blue-l);color:#1e40af}.b-encurso .badge-dot{background:var(--blue)}
-    .b-bloqueada{background:var(--pink-l);color:#9d174d}.b-bloqueada .badge-dot{background:var(--pink)}
-    .b-pendiente{background:#f3f4f6;color:#374151}.b-pendiente .badge-dot{background:var(--muted)}
-    .b-completada{background:var(--blue-l);color:#1e40af}.b-completada .badge-dot{background:var(--blue)}
-    .clas-pub{background:var(--indigo-l);color:#4338ca;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:8px}
-    .clas-priv{background:var(--amber-l);color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:8px}
-    .proy-chip{font-size:11px;font-weight:600;background:var(--indigo-l);color:var(--indigo);padding:2px 8px;border-radius:8px;display:inline-block;margin-bottom:6px}
-
-    /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
-    .kpi-card{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.06);border-left:4px solid}
-    .kpi-val{font-size:28px;font-weight:800;line-height:1}
-    .kpi-lbl{font-size:11px;color:var(--sub);margin-top:4px;line-height:1.3}
-
+    /* PROYECTO CARDS */
+    .proyecto-card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:transform .15s,box-shadow .15s}
+    .proyecto-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+    .proyecto-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+    .proyecto-nombre{font-size:15px;font-weight:700;color:var(--text);flex:1}
+    .proyecto-cliente{font-size:12px;color:var(--sub);margin-bottom:8px}
+    .proyecto-stats{display:flex;gap:12px}
+    .proyecto-stat{font-size:11px;color:var(--muted)}
+    .proyecto-stat strong{color:var(--text);font-weight:700}
+    
+    /* HITO/ACCION CARDS */
+    .card{background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);cursor:pointer}
+    .card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+    .card-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
+    .badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap}
+    .badge.completado{background:var(--green-l);color:#15803d}
+    .badge.en-curso{background:var(--blue-l);color:#1e40af}
+    .badge.pendiente{background:var(--yellow-l);color:#a16207}
+    .badge.bloqueada{background:var(--red-l);color:#b91c1c}
+    .badge.alta{background:var(--red-l);color:#b91c1c}
+    .badge.media{background:var(--yellow-l);color:#a16207}
+    .badge.baja{background:var(--green-l);color:#15803d}
+    .card-meta{font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+    
+    /* BOTONES */
+    .btn-add{width:100%;padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-primary{width:100%;padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+    .btn-danger{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+    
+    /* FILTROS */
+    .filter-chips{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .filter-chip{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;transition:all .2s}
+    .filter-chip.active{background:var(--indigo);color:#fff;border-color:var(--indigo)}
+    
     /* MODAL */
-    .modal-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end}
-    .modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-    .modal-box{position:relative;width:100%;max-width:480px;margin:0 auto;background:var(--card);border-radius:20px 20px 0 0;padding:20px 18px 36px;max-height:88vh;overflow-y:auto}
+    .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;display:none;align-items:flex-end;justify-content:center}
+    .modal-box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:20px 18px 24px}
     .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-    .modal-title{font-size:16px;font-weight:700;color:var(--navy)}
-    .modal-close{background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--sub)}
+    .modal-title{font-size:18px;font-weight:800}
+    .modal-close{background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);padding:0;line-height:1}
+    
+    /* FORMS */
     .form-group{margin-bottom:14px}
-    .form-label{font-size:12px;font-weight:700;color:var(--sub);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
-    .form-input,.form-select,.form-textarea{width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid var(--border);background:#f8fafc;color:var(--navy);font-size:14px;font-family:inherit;outline:none}
+    .form-label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:6px}
+    .form-input,.form-select,.form-textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;outline:none}
     .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--indigo)}
-    .form-textarea{resize:vertical;min-height:70px}
+    .form-textarea{resize:vertical;min-height:80px}
     .form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .btn-primary{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;margin-bottom:10px;font-family:inherit}
-    .btn-danger{width:100%;padding:11px;background:var(--red-l);color:#991b1b;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
-    .btn-add{width:100%;padding:11px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;border:2px dashed}
-    .btn-add-h{background:var(--indigo-l);color:#4338ca;border-color:#c7d2fe}
-    .btn-add-a{background:var(--pink-l);color:#9d174d;border-color:#f9a8d4}
-
-    /* ADMIN PANEL */
-    .admin-section{background:var(--admin-l);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid #c4b5fd}
-    .admin-title{font-size:13px;font-weight:700;color:#5b21b6;margin-bottom:12px}
-    .admin-task-row{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:8px;border-left:3px solid var(--admin)}
-    .admin-task-name{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px}
-    .admin-task-meta{font-size:11px;color:var(--muted)}
-
-    /* LOADING */
-    #loading{position:fixed;inset:0;z-index:999;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-    .spinner{width:32px;height:32px;border:3px solid #334155;border-top-color:var(--indigo);border-radius:50%;animation:spin .8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-
+    
     /* TOAST */
-    #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:300;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.2);display:none}
-
-    /* NOTIFY BANNER */
-    #notify-banner{background:var(--indigo);color:#fff;padding:10px 16px;font-size:13px;display:none;align-items:center;justify-content:space-between}
-    .notify-btn{background:#fff;color:var(--indigo);border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+    .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:200;display:none}
+    
+    /* LOADING */
+    #loading{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999}
+    .loading-logo{font-size:64px;margin-bottom:16px;animation:pulse 2s ease-in-out infinite}
+    .loading-text{font-size:16px;font-weight:700;color:#f8fafc}
+    @keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+    
+    /* SYNC INDICATOR */
+    .sync-indicator{position:fixed;bottom:80px;right:20px;background:var(--green);color:#fff;padding:8px 14px;border-radius:20px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:50;display:none;align-items:center;gap:6px}
+    .sync-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.5s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
   </style>
 </head>
 <body>
 
-<!-- LOADING -->
 <div id="loading">
-  <div style="font-size:48px">🏗️</div>
-  <div class="spinner"></div>
-  <div style="font-size:13px;color:#64748b">Cargando tablero…</div>
+  <div class="loading-logo">🏗️</div>
+  <div class="loading-text">MyH Arquitectos</div>
 </div>
 
-<!-- NOTIFY BANNER -->
-<div id="notify-banner">
-  <span>Activa notificaciones para recibir alertas del equipo</span>
-  <button class="notify-btn" onclick="activarNotificaciones()">Activar</button>
-</div>
-
-<!-- APP -->
 <div id="app" style="display:none">
-
   <!-- LOGIN -->
   <div id="login">
     <div class="login-logo">🏗️</div>
     <div class="login-title">MyH Arquitectos</div>
     <div class="login-sub">Tablero de Proyectos</div>
     <div class="login-card">
-      <label class="login-label">Tu nombre</label>
-      <select id="login-user" class="login-select">
-        <option value="">— Selecciona —</option>
-        <option>Paula Herrera</option>
-        <option>Claudio Leiva</option>
-        <option>Patricia Muñoz</option>
-        <option>Martin Diaz</option>
-        <option>Jose Halty</option>
+      <label class="login-label">Usuario</label>
+      <select class="login-select" id="login-user">
+        <option value="">Selecciona tu nombre</option>
+        <option value="Paula Herrera">Paula Herrera</option>
+        <option value="Martín Díaz">Martín Díaz</option>
+        <option value="José Halty">José Halty</option>
       </select>
-
-      <div id="role-section" style="display:none;margin-bottom:16px">
-        <label class="login-label">¿Cómo quieres ingresar hoy?</label>
-        <div class="role-grid">
-          <button class="role-btn active" id="btn-equipo" onclick="selectRole('equipo')">
-            <span class="role-icon">👷</span>
-            <span class="role-name">Paula Equipo</span>
-            <span class="role-desc">Proyectos y tareas</span>
-          </button>
-          <button class="role-btn" id="btn-admin" onclick="selectRole('admin')">
-            <span class="role-icon">👑</span>
-            <span class="role-name">Paula Admin</span>
-            <span class="role-desc">Gestión interna</span>
-          </button>
-        </div>
+      <label class="login-label">Rol</label>
+      <div class="role-grid">
+        <button class="role-btn active" id="role-equipo" onclick="selectRole('equipo')">
+          <span class="role-icon">👷</span>
+          <div class="role-name">Equipo</div>
+          <div class="role-desc">Ver y editar</div>
+        </button>
+        <button class="role-btn" id="role-admin" onclick="selectRole('admin')">
+          <span class="role-icon">⚙️</span>
+          <div class="role-name">Admin</div>
+          <div class="role-desc">Gestión total</div>
+        </button>
       </div>
-
       <label class="login-label">Contraseña</label>
-      <input id="login-pass" type="password" class="login-input" placeholder="••••••••"/>
-      <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar →</button>
-      <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+      <input type="password" class="login-input" id="login-pass" placeholder="••••••••"/>
+      <button class="login-btn" id="login-btn" onclick="login()">Entrar</button>
+      <div class="login-error" id="login-error">❌ Contraseña incorrecta</div>
     </div>
   </div>
 
-  <!-- MAIN -->
+  <!-- MAIN APP -->
   <div id="main" style="display:none">
-    <div id="header">
-      <div class="header-top">
-        <div>
-          <div class="header-brand">MyH Arquitectos</div>
-          <div class="header-title">Tablero de Proyectos</div>
-        </div>
-        <div class="header-right">
-          <span class="role-badge" id="role-badge">Equipo</span>
-          <span class="status-dot" id="status-dot"></span>
-          <span style="font-size:11px;color:#64748b;cursor:pointer" onclick="doLogout()">Salir</span>
-        </div>
-      </div>
-      <div class="alert-bar" id="alert-bar" style="display:none"></div>
-    </div>
-
+    <div id="header"></div>
+    <div id="tab-bar"></div>
     <div id="content"></div>
-
-    <div id="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('resumen',this)">
-        <span class="tab-icon">📊</span><span class="tab-label">Resumen</span>
-      </button>
-      <button class="tab-btn" onclick="switchTab('hitos',this)">
-        <span class="tab-icon">🏁</span><span class="tab-label">Hitos</span>
-      </button>
-      <button class="tab-btn" onclick="switchTab('acciones',this)">
-        <span class="tab-icon">⚡</span><span class="tab-label">Acciones</span>
-      </button>
-      <button class="tab-btn" id="tab-admin-btn" style="display:none" onclick="switchTab('admin',this)">
-        <span class="tab-icon">👑</span><span class="tab-label">Admin</span>
-      </button>
-    </div>
   </div>
 </div>
 
 <!-- MODAL -->
-<div id="modal" class="modal-overlay" style="display:none">
-  <div class="modal-bg" onclick="window.closeModal()"></div>
-  <div class="modal-box" id="modal-box"></div>
+<div class="modal-overlay" id="modal"></div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- SYNC INDICATOR -->
+<div class="sync-indicator" id="sync-indicator">
+  <div class="sync-dot"></div>
+  <span>Sincronizando...</span>
 </div>
 
-<div id="toast"></div>
-
-<script type="module">
-// ── FIREBASE CONFIG ───────────────────────────────────
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyBoYrfIEy_0fUipt12GIGffWPaIguuXvWk",
+<script>
+// ══════════════════════════════════════════════════════
+// FIREBASE CONFIG
+// ══════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBoYrfIEy_0fUipt12GIGfWPaIguuXvWk",
   authDomain: "myh-arquitectos.firebaseapp.com",
+  databaseURL: "https://myh-arquitectos-default-rtdb.firebaseio.com",
   projectId: "myh-arquitectos",
   storageBucket: "myh-arquitectos.firebasestorage.app",
   messagingSenderId: "635426083940",
-  appId: "1:635426083940:web:754e169bc59f0c44b83b71",
-  databaseURL: "https://myh-arquitectos-default-rtdb.firebaseio.com"
+  appId: "1:635426083940:web:754e169bc59f0c44b83b71"
 };
 
-const VAPID_KEY = "BAGWzLt3OZd2Gw1n7clEn2Xs6u5mpbDiFg3RXY5aMWXH0zV6_VBBtJEQIxFEUTog8OOO5rGHYWSY4STxbapqjZE";
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-const firebaseApp = initializeApp(FIREBASE_CONFIG);
-const db = getDatabase(firebaseApp);
-let messaging;
-try { messaging = getMessaging(firebaseApp); } catch(e) {}
-
-// ── USUARIOS ──────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// STATE & USUARIOS
+// ══════════════════════════════════════════════════════
 const USUARIOS = {
-  "Paula Herrera":  { pass: "myh2024admin", esAdmin: true },
-  "Claudio Leiva":  { pass: "myh2024equipo", esAdmin: false },
-  "Patricia Muñoz": { pass: "myh2024equipo", esAdmin: false },
-  "Martin Diaz":    { pass: "myh2024equipo", esAdmin: false },
+  "Paula Herrera": "myh2024admin",
+  "Martín Díaz": "myh2024",
+  "José Halty": "myh2024"
 };
 
-const ESTADOS_HITO   = ["A tiempo","En Riesgo","Retrasado","Completado"];
-const ESTADOS_ACCION = ["En curso","Bloqueada","Pendiente","Completada"];
-const PRIORIDADES    = ["Alta","Media","Baja"];
-const RESPONSABLES   = ["Paula Herrera","Claudio Leiva","Patricia Muñoz","Martin Diaz","Juan Pablo Torres","Carla Vergara","Pilar Espinoza","Jorge Bravo","Rodrigo Escobar","Jose Halty"];
-
-// ── ESTADO ────────────────────────────────────────────
 let STATE = {
-  user: null, role: "equipo",
-  hitos: [], acciones: [],
+  user: null,
+  role: "equipo",
+  tab: "proyectos",
+  proyectos: [],
+  hitos: [],
+  acciones: [],
   adminTareas: [],
-  tab: "resumen",
-  filtroH: "Todos", filtroA: "Todos",
+  filtroH: "todos",
+  filtroA: "todos"
 };
 
-// ── HELPERS ───────────────────────────────────────────
-function badgeClass(e) {
-  const m = {"A tiempo":"atiempo","En Riesgo":"riesgo","Retrasado":"retrasado","Completado":"completado","En curso":"encurso","Bloqueada":"bloqueada","Pendiente":"pendiente","Completada":"completada"};
-  return "badge b-"+(m[e]||"pendiente");
-}
-function badge(e) { return `<span class="${badgeClass(e)}"><span class="badge-dot"></span>${e}</span>`; }
-function showToast(m,ms=2500) { const t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",ms); }
-function setStatus(s) { const d=document.getElementById("status-dot");if(d)d.style.background=s==="ok"?"#22c55e":s==="saving"?"#eab308":"#ef4444"; }
-function closeModal() { document.getElementById("modal").style.display="none"; }
-function openModal(html) { document.getElementById("modal-box").innerHTML=html;document.getElementById("modal").style.display="flex"; }
-window.closeModal = closeModal;
+// ══════════════════════════════════════════════════════
+// FIREBASE SYNC
+// ══════════════════════════════════════════════════════
+let syncTimeout = null;
 
-// ── LOGIN ─────────────────────────────────────────────
-document.getElementById("login-user").addEventListener("change", function() {
-  const u = this.value;
-  const rs = document.getElementById("role-section");
-  const btn = document.getElementById("login-btn");
-  if (u === "Paula Herrera") {
-    rs.style.display = "block";
-    btn.className = STATE.role === "admin" ? "login-btn admin-btn" : "login-btn";
-  } else {
-    rs.style.display = "none";
-    btn.className = "login-btn";
-  }
-});
+function showSyncIndicator() {
+  const indicator = document.getElementById("sync-indicator");
+  indicator.style.display = "flex";
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    indicator.style.display = "none";
+  }, 2000);
+}
+
+function saveToFirebase() {
+  if (!STATE.user) return;
+  
+  showSyncIndicator();
+  
+  db.ref('tablero').set({
+    proyectos: STATE.proyectos,
+    hitos: STATE.hitos,
+    acciones: STATE.acciones,
+    adminTareas: STATE.adminTareas || [],
+    lastUpdate: Date.now(),
+    lastUser: STATE.user
+  }).catch(err => {
+    console.error("Error guardando en Firebase:", err);
+    showToast("⚠️ Error al sincronizar");
+  });
+}
+
+function loadFromFirebase() {
+  return new Promise((resolve) => {
+    db.ref('tablero').once('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        STATE.proyectos = data.proyectos || [];
+        STATE.hitos = data.hitos || [];
+        STATE.acciones = data.acciones || [];
+        STATE.adminTareas = data.adminTareas || [];
+      }
+      resolve();
+    });
+  });
+}
+
+// Escuchar cambios en tiempo real
+function listenToFirebase() {
+  db.ref('tablero').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.lastUser !== STATE.user) {
+      // Otro usuario hizo cambios
+      STATE.proyectos = data.proyectos || [];
+      STATE.hitos = data.hitos || [];
+      STATE.acciones = data.acciones || [];
+      STATE.adminTareas = data.adminTareas || [];
+      render();
+      showToast("🔄 Datos actualizados");
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════
+let selectedRole = "equipo";
 
 window.selectRole = function(role) {
-  STATE.role = role;
-  document.getElementById("btn-equipo").className = "role-btn" + (role==="equipo"?" active":"");
-  document.getElementById("btn-admin").className = "role-btn" + (role==="admin"?" active-admin":"");
-  document.getElementById("login-btn").className = role==="admin"?"login-btn admin-btn":"login-btn";
+  selectedRole = role;
+  document.querySelectorAll(".role-btn").forEach(b => {
+    b.classList.remove("active", "active-admin");
+  });
+  const btn = document.getElementById(`role-${role}`);
+  btn.classList.add(role === "admin" ? "active-admin" : "active");
+  
+  const loginBtn = document.getElementById("login-btn");
+  loginBtn.classList.toggle("admin-btn", role === "admin");
 };
 
-window.doLogin = function() {
+window.login = async function() {
   const user = document.getElementById("login-user").value;
   const pass = document.getElementById("login-pass").value;
-  const err  = document.getElementById("login-error");
-  const cfg  = USUARIOS[user];
-  if (cfg && cfg.pass === pass) {
-    err.style.display = "none";
-    STATE.user = user;
-    if (!cfg.esAdmin) STATE.role = "equipo";
-    localStorage.setItem("myh-user", user);
-    localStorage.setItem("myh-role", STATE.role);
-    showMain();
-    loadData();
-    mostrarBannerNotif();
-  } else {
-    err.style.display = "block";
+  
+  if (!user || !USUARIOS[user]) {
+    document.getElementById("login-error").style.display = "block";
+    document.getElementById("login-error").textContent = "❌ Selecciona un usuario";
+    return;
   }
-};
-
-document.getElementById("login-pass").addEventListener("keydown", e => { if(e.key==="Enter") window.doLogin(); });
-
-window.doLogout = function() {
-  localStorage.removeItem("myh-user");
-  localStorage.removeItem("myh-role");
-  STATE.user = null;
-  document.getElementById("main").style.display = "none";
-  document.getElementById("login").style.display = "flex";
+  
+  if (pass !== USUARIOS[user]) {
+    document.getElementById("login-error").style.display = "block";
+    document.getElementById("login-error").textContent = "❌ Contraseña incorrecta";
+    return;
+  }
+  
+  STATE.user = user;
+  STATE.role = selectedRole;
+  
+  localStorage.setItem("myh-user", user);
+  localStorage.setItem("myh-role", selectedRole);
+  
+  document.getElementById("login").style.display = "none";
+  
+  // Cargar datos de Firebase
+  await loadFromFirebase();
+  listenToFirebase();
+  
+  showMain();
+  render();
+  showToast(`👋 Hola, ${user.split(" ")[0]}!`);
 };
 
 function showMain() {
-  document.getElementById("login").style.display = "none";
   document.getElementById("main").style.display = "block";
-  const rb = document.getElementById("role-badge");
-  const tab = document.getElementById("tab-admin-btn");
-  if (STATE.role === "admin") {
-    rb.textContent = "Admin";
-    rb.className = "role-badge admin";
-    tab.style.display = "flex";
-  } else {
-    rb.textContent = USUARIOS[STATE.user]?.esAdmin ? "Paula Equipo" : STATE.user.split(" ")[0];
-    rb.className = "role-badge equipo";
-    tab.style.display = "none";
-  }
 }
 
-// ── FIREBASE DB ───────────────────────────────────────
-function loadData() {
-  // Version check — si cambia FORZAMOS recarga de datos demo (sin borrar user)
-  const VERSION = "v10";
-  const savedV = localStorage.getItem("myh-version");
-  if (savedV !== VERSION) {
-    // Forzar recarga — eliminar solo los datos del tablero
-    localStorage.removeItem("myh-hitos");
-    localStorage.removeItem("myh-acciones");
-    localStorage.removeItem("myh-adminTareas");
-    localStorage.setItem("myh-version", VERSION);
-  }
-  const h = localStorage.getItem("myh-hitos");
-  const a = localStorage.getItem("myh-acciones");
-  const t = localStorage.getItem("myh-adminTareas");
-  STATE.hitos       = h ? JSON.parse(h) : HITOS_DEMO;
-  STATE.acciones    = a ? JSON.parse(a) : ACCIONES_DEMO;
-  STATE.adminTareas = t ? JSON.parse(t) : [];
-  if (!h) localStorage.setItem("myh-hitos",    JSON.stringify(STATE.hitos));
-  if (!a) localStorage.setItem("myh-acciones", JSON.stringify(STATE.acciones));
-  setStatus("ok");
-  render();
-}
-
-function saveData(tipo, descripcion) {
-  localStorage.setItem("myh-hitos",       JSON.stringify(STATE.hitos));
-  localStorage.setItem("myh-acciones",    JSON.stringify(STATE.acciones));
-  localStorage.setItem("myh-adminTareas", JSON.stringify(STATE.adminTareas));
-  setStatus("ok");
-  showToast("✅ Guardado");
-}
-
-// ── NOTIFICACIONES ────────────────────────────────────
-window.activarNotificaciones = async function() {
-  if (!messaging) return;
-  try {
-    const perm = await Notification.requestPermission();
-    if (perm === "granted") {
-      const token = await getToken(messaging, { vapidKey: VAPID_KEY });
-      if (token) {
-        await set(ref(db, `tokens/${STATE.user.replace(/ /g,"_")}`), token);
-        document.getElementById("notify-banner").style.display = "none";
-        showToast("🔔 Notificaciones activadas");
-      }
-    }
-  } catch(e) {}
-};
-
-function mostrarBannerNotif() {
-  if (!messaging) return;
-  if (Notification.permission !== "granted") {
-    document.getElementById("notify-banner").style.display = "flex";
-  }
-}
-
-function enviarNotificacion(tipo, desc) {
-  // Las notificaciones push se envían via Firebase desde el servidor
-  // Aquí registramos el evento para que el service worker las procese
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({
-      type: "CAMBIO", usuario: STATE.user, accion: tipo, descripcion: desc
-    });
-  }
-}
-
-// ── RENDER ────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════
 function render() {
-  updateAlertBar();
-  const c = document.getElementById("content");
-  if (!c) return;
-  if (STATE.tab==="resumen")  c.innerHTML = renderResumen();
-  if (STATE.tab==="hitos")    c.innerHTML = renderHitos();
-  if (STATE.tab==="acciones") c.innerHTML = renderAcciones();
-  if (STATE.tab==="admin")    c.innerHTML = renderAdmin();
+  renderHeader();
+  renderTabs();
+  renderContent();
 }
 
-function updateAlertBar() {
-  const bar = document.getElementById("alert-bar");
-  if (!bar) return;
-  const ret  = STATE.hitos.filter(h=>h.estado==="Retrasado").length;
-  const ries = STATE.hitos.filter(h=>h.estado==="En Riesgo").length;
-  const bloq = STATE.acciones.filter(a=>a.estado==="Bloqueada").length;
-  if (ret+ries+bloq===0){bar.style.display="none";return;}
-  bar.style.display="flex";
-  bar.innerHTML=[
-    ret  ?`<span class="alert-chip">🔴 ${ret} retrasados</span>`:"",
-    ries ?`<span class="alert-chip">⚠️ ${ries} en riesgo</span>`:"",
-    bloq ?`<span class="alert-chip">⛔ ${bloq} bloqueadas</span>`:"",
-  ].join("");
-}
-
-function renderResumen() {
-  const h=STATE.hitos, a=STATE.acciones;
-  const kpis=[
-    {v:h.length,          lbl:"Hitos activos",      color:"#6366f1"},
-    {v:h.filter(x=>x.estado==="A tiempo").length, lbl:"A tiempo", color:"#22c55e"},
-    {v:h.filter(x=>x.estado==="En Riesgo").length,lbl:"En riesgo",color:"#eab308"},
-    {v:h.filter(x=>x.estado==="Retrasado").length,lbl:"Retrasados",color:"#ef4444"},
-    {v:h.filter(x=>x.estado==="Completado").length,lbl:"Completados",color:"#0ea5e9"},
-    {v:a.filter(x=>x.estado==="Bloqueada").length,lbl:"Bloqueadas", color:"#ec4899"},
-  ];
-  const carga={};
-  h.forEach(x=>{
-    if(!carga[x.responsable])carga[x.responsable]={total:0,mal:0};
-    carga[x.responsable].total++;
-    if(x.estado==="Retrasado"||x.estado==="En Riesgo")carga[x.responsable].mal++;
+function renderHeader() {
+  const alertas = STATE.hitos.filter(h => {
+    if (!h.fechaFin) return false;
+    const diff = daysDiff(h.fechaFin);
+    return diff <= 7 && diff >= 0 && h.estado !== "Completado";
   });
-  const arr=Object.entries(carga).sort((a,b)=>b[1].total-a[1].total);
-  const maxC=Math.max(...arr.map(([,v])=>v.total),1);
-  return `
-    <div class="kpi-grid">${kpis.map(k=>`
-      <div class="kpi-card" style="border-color:${k.color}">
-        <div class="kpi-val" style="color:${k.color}">${k.v}</div>
-        <div class="kpi-lbl">${k.lbl}</div>
-      </div>`).join("")}
+  
+  const alertHTML = alertas.length > 0 
+    ? `<div class="alert-bar">${alertas.map(a => 
+        `<span class="alert-chip">⚠️ ${a.hito} (${daysDiff(a.fechaFin)}d)</span>`
+      ).join("")}</div>`
+    : "";
+  
+  document.getElementById("header").innerHTML = `
+    <div class="header-top">
+      <div>
+        <div class="header-brand">MyH Arquitectos</div>
+        <div class="header-title">Tablero de Proyectos</div>
+      </div>
+      <div class="header-right">
+        <div class="status-dot"></div>
+        <div class="role-badge ${STATE.role}">${STATE.role === "admin" ? "Admin" : "Equipo"}</div>
+      </div>
     </div>
-    <div class="card" style="padding:16px">
-      <p style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em">Carga por responsable</p>
-      ${arr.map(([n,d])=>`
-        <div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span style="font-size:13px;color:var(--navy2);font-weight:500">${n}</span>
-            <span style="font-size:11px;color:var(--sub)">${d.total} · <span style="color:#ef4444">${d.mal} prob.</span></span>
-          </div>
-          <div style="height:6px;background:#f1f5f9;border-radius:4px;overflow:hidden">
-            <div style="height:100%;width:${(d.total/maxC)*100}%;background:${d.mal>2?"#ef4444":d.mal>0?"#eab308":"#22c55e"};border-radius:4px"></div>
-          </div>
-        </div>`).join("")}
-    </div>`;
+    ${alertHTML}
+  `;
 }
 
-function renderHitos() {
-  const filtros=["Todos","Retrasado","En Riesgo","A tiempo","Completado"];
-  const lista=STATE.filtroH==="Todos"?STATE.hitos:STATE.hitos.filter(h=>h.estado===STATE.filtroH);
-  const isPC = window.innerWidth >= 900;
+function renderTabs() {
+  const tabs = [
+    { id: "proyectos", icon: "🏗️", label: "Proyectos" },
+    { id: "hitos", icon: "🎯", label: "Hitos" },
+    { id: "acciones", icon: "✅", label: "Acciones" },
+    { id: "kpis", icon: "📊", label: "KPIs" }
+  ];
   
-  const filtrosHTML = `
-    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;flex-wrap:wrap">
-      ${filtros.map(f=>`<button onclick="setFiltroH('${f}')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;background:${STATE.filtroH===f?"#1e293b":"#f1f5f9"};color:${STATE.filtroH===f?"#fff":"#64748b"}">${f}</button>`).join("")}
-    </div>
-    <button onclick="openNuevoHito()" class="btn-add btn-add-h">＋ Agregar nuevo hito</button>`;
-  
-  if (isPC) {
-    // VISTA TABLA en PC
-    if (lista.length === 0) {
-      return filtrosHTML + `<div style="text-align:center;padding:60px 20px;color:var(--muted)"><p style="font-size:16px;font-weight:600;margin-bottom:8px">Sin hitos aún</p><p style="font-size:13px">Agrega tu primer hito con el botón de arriba</p></div>`;
-    }
-    return filtrosHTML + `
-      <table class="pc-table">
-        <thead>
-          <tr>
-            <th>Proyecto</th>
-            <th>Hito</th>
-            <th>Responsable</th>
-            <th>Fecha</th>
-            <th>Estado</th>
-            <th>Comentario</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${lista.map(h=>`
-            <tr onclick="openEditHito('${h.id}')">
-              <td><strong>${h.proyecto}</strong><br><span style="font-size:10px;color:var(--muted)">${h.clasificacion||""} · ${h.etapa||""}</span></td>
-              <td>${h.hito}</td>
-              <td>${h.responsable}</td>
-              <td>${h.fecha||"—"}</td>
-              <td>${badge(h.estado)}</td>
-              <td style="font-size:11px;color:var(--sub);max-width:200px">${h.comentario||"—"}</td>
-            </tr>`).join("")}
-        </tbody>
-      </table>`;
+  if (STATE.role === "admin") {
+    tabs.push({ id: "admin", icon: "⚙️", label: "Admin" });
   }
   
-  // VISTA MÓVIL (cards agrupadas por proyecto)
-  const porProy={};
-  lista.forEach(h=>{if(!porProy[h.proyecto])porProy[h.proyecto]=[];porProy[h.proyecto].push(h);});
-  return filtrosHTML + (lista.length===0?`<div style="text-align:center;padding:40px 20px;color:var(--muted)"><p style="font-size:14px">Sin hitos aún</p></div>`:"") +
-    Object.entries(porProy).map(([proy,items])=>`
-      <div class="card">
-        <div class="card-header">
-          <div>
-            <span class="card-title">${proy}</span>
-            <span class="${items[0].clasificacion==="Público"?"clas-pub":"clas-priv"}">${items[0].clasificacion||""}</span>
-          </div>
-          <span style="font-size:11px;color:var(--muted)">${items.length} hito${items.length>1?"s":""}</span>
+  document.getElementById("tab-bar").innerHTML = tabs.map(t => `
+    <button class="tab-btn ${STATE.tab === t.id ? "active" : ""}" onclick="switchTab('${t.id}', this)">
+      <div class="tab-icon">${t.icon}</div>
+      <div class="tab-label">${t.label}</div>
+    </button>
+  `).join("");
+}
+
+function renderContent() {
+  const c = document.getElementById("content");
+  
+  if (STATE.tab === "proyectos") c.innerHTML = renderProyectos();
+  else if (STATE.tab === "hitos") c.innerHTML = renderHitos();
+  else if (STATE.tab === "acciones") c.innerHTML = renderAcciones();
+  else if (STATE.tab === "kpis") c.innerHTML = renderKPIs();
+  else if (STATE.tab === "admin") c.innerHTML = renderAdmin();
+}
+
+// ══════════════════════════════════════════════════════
+// PROYECTOS
+// ══════════════════════════════════════════════════════
+function renderProyectos() {
+  const isPC = window.innerWidth >= 900;
+  const cards = STATE.proyectos.map(p => {
+    const hitos = STATE.hitos.filter(h => h.proyecto === p.nombre);
+    const completados = hitos.filter(h => h.estado === "Completado").length;
+    const acciones = STATE.acciones.filter(a => a.proyecto === p.nombre);
+    
+    return `
+      <div class="proyecto-card" onclick="editarProyecto('${p.id}')">
+        <div class="proyecto-header">
+          <div class="proyecto-nombre">${p.nombre}</div>
         </div>
-        ${items.map(h=>`
-          <button class="card-row" onclick="openEditHito('${h.id}')">
-            <div class="row-top"><span class="row-name">${h.hito}</span>${badge(h.estado)}</div>
-            <div class="row-meta"><span>📅 ${h.fecha||"—"}</span><span>👤 ${h.responsable}</span>${h.comentario?`<span>💬 ${h.comentario}</span>`:""}</div>
-            <span class="row-tap">Toca para editar →</span>
-          </button>`).join("")}
-      </div>`).join("");
-}
-
-function renderAcciones() {
-  const filtros=["Todos","Bloqueada","En curso","Pendiente","Completada"];
-  const lista=STATE.filtroA==="Todos"?STATE.acciones:STATE.acciones.filter(a=>a.estado===STATE.filtroA);
-  const isPC = window.innerWidth >= 900;
+        <div class="proyecto-cliente">${p.cliente}</div>
+        <div class="proyecto-stats">
+          <span class="proyecto-stat"><strong>${completados}/${hitos.length}</strong> hitos</span>
+          <span class="proyecto-stat"><strong>${acciones.length}</strong> acciones</span>
+        </div>
+      </div>
+    `;
+  }).join("");
   
-  const topHTML = `
-    <div style="display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;flex-wrap:wrap">
-      ${filtros.map(f=>`<button onclick="setFiltroA('${f}')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;border:none;cursor:pointer;white-space:nowrap;background:${STATE.filtroA===f?"#1e293b":"#f1f5f9"};color:${STATE.filtroA===f?"#fff":"#64748b"}">${f}</button>`).join("")}
-    </div>
-    <button onclick="openNuevaAccion()" class="btn-add btn-add-a">＋ Agregar nueva acción</button>`;
-  
-  if (isPC) {
-    // KANBAN en PC
-    const cols = [
-      {label:"En curso",   estado:"En curso",   color:"#3b82f6", bg:"#dbeafe"},
-      {label:"Bloqueada",  estado:"Bloqueada",  color:"#ec4899", bg:"#fce7f3"},
-      {label:"Pendiente",  estado:"Pendiente",  color:"#94a3b8", bg:"#f3f4f6"},
-      {label:"Completada", estado:"Completada", color:"#0ea5e9", bg:"#e0f2fe"},
-    ];
-    if (lista.length === 0) {
-      return topHTML + `<div style="text-align:center;padding:60px 20px;color:var(--muted)"><p style="font-size:16px;font-weight:600;margin-bottom:8px">Sin acciones aún</p><p style="font-size:13px">Agrega tu primera acción con el botón de arriba</p></div>`;
-    }
-    return topHTML + `
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
-        ${cols.map(col => {
-          const items = lista.filter(a => a.estado === col.estado);
-          return `
-            <div style="background:#fafbfc;border-radius:12px;padding:14px;min-height:300px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid ${col.color}">
-                <span style="font-size:12px;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.05em">${col.label}</span>
-                <span style="font-size:11px;color:var(--muted);background:#fff;padding:2px 8px;border-radius:10px;font-weight:600">${items.length}</span>
-              </div>
-              ${items.map(a => `
-                <div onclick="openEditAccion('${a.id}')" style="background:#fff;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer;border-left:3px solid ${col.color}">
-                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;line-height:1.4">${a.accion}</div>
-                  <div style="font-size:10px;color:var(--indigo);background:var(--indigo-l);padding:2px 6px;border-radius:6px;display:inline-block;margin-bottom:6px">${a.proyecto}</div>
-                  <div style="font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap">
-                    <span>📅 ${a.fecha||"—"}</span>
-                    <span>👤 ${a.responsable}</span>
-                  </div>
-                  ${a.comentario?`<div style="margin-top:8px;font-size:11px;color:#713f12;background:#fef9c3;padding:6px 8px;border-radius:6px">⚠️ ${a.comentario}</div>`:""}
-                </div>`).join("")}
-              ${items.length===0?`<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--muted)">— vacío —</div>`:""}
-            </div>`;
-        }).join("")}
-      </div>`;
-  }
-  
-  // VISTA MÓVIL
-  return topHTML + (lista.length===0?`<div style="text-align:center;padding:40px 20px;color:var(--muted)"><p style="font-size:14px">Sin acciones aún</p></div>`:"") +
-    lista.map(a=>`
-      <button onclick="openEditAccion('${a.id}')" style="display:block;width:100%;text-align:left;background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);border:none;cursor:pointer">
-        <div class="row-top"><span class="row-name" style="font-weight:600">${a.accion}</span>${badge(a.estado)}</div>
-        <span class="proy-chip">${a.proyecto}</span>
-        <div class="row-meta"><span>📅 ${a.fecha||"—"}</span><span>👤 ${a.responsable}</span></div>
-        ${a.comentario?`<div class="row-comment">⚠️ ${a.comentario}</div>`:""}
-        <span class="row-tap">Toca para editar →</span>
-      </button>`).join("");
-}
-
-function renderAdmin() {
-  const tareas = STATE.adminTareas || [];
   return `
-    <div class="admin-section">
-      <p class="admin-title">👑 Panel de Administración — Solo Paula</p>
-      <p style="font-size:12px;color:#5b21b6;margin-bottom:14px">Tareas de gestión interna — no visibles para el equipo</p>
-      <button onclick="openNuevaTareaAdmin()" style="width:100%;padding:11px;background:#fff;color:#5b21b6;border:2px dashed #a78bfa;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">＋ Nueva tarea administrativa</button>
-      ${tareas.length===0?`<p style="font-size:13px;color:#7c3aed;text-align:center;padding:20px 0">No hay tareas administrativas pendientes</p>`:""}
-      ${tareas.map(t=>`
-        <div class="admin-task-row">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-            <div class="admin-task-name">${t.nombre}</div>
-            ${badge(t.estado||"Pendiente")}
-          </div>
-          <div class="admin-task-meta">📅 ${t.fecha||"—"} · ${t.tipo||"General"}</div>
-          ${t.comentario?`<div style="margin-top:6px;font-size:11px;color:#6d28d9">${t.comentario}</div>`:""}
-          <div style="margin-top:10px;display:flex;gap:8px">
-            <button onclick="editarTareaAdmin('${t.id}')" style="flex:1;padding:7px;background:#ede9fe;color:#5b21b6;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Editar</button>
-            <button onclick="eliminarTareaAdmin('${t.id}')" style="padding:7px 12px;background:#fee2e2;color:#991b1b;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">✕</button>
-          </div>
-        </div>`).join("")}
-    </div>
-    <div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-      <p style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Gestión de Usuarios</p>
-      ${Object.entries(USUARIOS).map(([n,u])=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--navy)">${n}</div>
-            <div style="font-size:11px;color:var(--muted)">${u.esAdmin?"Admin":"Equipo interno"}</div>
-          </div>
-          <span style="font-size:10px;background:${u.esAdmin?"var(--admin-l)":"var(--indigo-l)"};color:${u.esAdmin?"#5b21b6":"#4338ca"};padding:3px 8px;border-radius:10px;font-weight:700">${u.esAdmin?"Admin":"Interno"}</span>
-        </div>`).join("")}
-    </div>`;
+    <button class="btn-add" onclick="openNuevoProyecto()">➕ Nuevo Proyecto</button>
+    <div class="${isPC ? 'pc-grid-2' : ''}">${cards}</div>
+  `;
 }
 
-// ── MODALES ───────────────────────────────────────────
-function selectOptions(arr, sel) { return arr.map(v=>`<option${v===sel?" selected":""}>${v}</option>`).join(""); }
-const proyectos = () => [...new Set(STATE.hitos.map(h=>h.proyecto))];
-
-window.openEditHito = function(id) {
-  const h=STATE.hitos.find(x=>x.id===id);if(!h)return;
-  const isAdmin=STATE.user==="Paula Herrera";
+window.openNuevoProyecto = function() {
   openModal(`
-    <div class="modal-head"><span class="modal-title">Editar Hito</span><button class="modal-close" onclick="window.closeModal()">✕</button></div>
-    <div class="form-group"><label class="form-label">Hito</label><input class="form-input" id="f-hito" value="${h.hito}"/></div>
-    <div class="form-group"><label class="form-label">Proyecto</label>
-      <input class="form-input" id="f-proyecto" value="${h.proyecto}" list="proy-list-eh" autocomplete="off"/>
-      <datalist id="proy-list-eh">${[...new Set(STATE.hitos.map(h=>h.proyecto))].sort().map(p=>`<option value="${p}">`).join("")}</datalist>
+    <div class="modal-head">
+      <span class="modal-title">Nuevo Proyecto</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="form-row2">
-      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="f-estado">${selectOptions(ESTADOS_HITO,h.estado)}</select></div>
-      <div class="form-group"><label class="form-label">Prioridad</label><select class="form-select" id="f-prioridad">${selectOptions(PRIORIDADES,h.prioridad)}</select></div>
+    <div class="form-group">
+      <label class="form-label">Nombre del Proyecto</label>
+      <input class="form-input" id="f-nombre" placeholder="Ej: Casa Familiar Los Ángeles"/>
     </div>
-    <div class="form-group"><label class="form-label">Responsable</label><select class="form-select" id="f-responsable">${selectOptions(RESPONSABLES,h.responsable)}</select></div>
-    <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" value="${h.fecha||""}"/></div>
-    <div class="form-group"><label class="form-label">Comentario</label><textarea class="form-textarea" id="f-comentario">${h.comentario||""}</textarea></div>
-    <button class="btn-primary" onclick="saveHito('${id}')">💾 Guardar</button>
-    ${isAdmin?`<button class="btn-danger" onclick="deleteHito('${id}')">🗑 Eliminar</button>`:""}
+    <div class="form-group">
+      <label class="form-label">Cliente</label>
+      <input class="form-input" id="f-cliente" placeholder="Ej: Familia González"/>
+    </div>
+    <button class="btn-primary" onclick="addProyecto()">➕ Agregar</button>
   `);
 };
 
-window.openNuevoHito = function() {
+window.addProyecto = function() {
+  const nombre = document.getElementById("f-nombre").value.trim();
+  if (!nombre) {
+    showToast("⚠️ Escribe un nombre");
+    return;
+  }
+  
+  STATE.proyectos.push({
+    id: "p" + Date.now(),
+    nombre,
+    cliente: document.getElementById("f-cliente").value
+  });
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Proyecto agregado");
+};
+
+window.editarProyecto = function(id) {
+  const p = STATE.proyectos.find(x => x.id === id);
+  if (!p) return;
+  
   openModal(`
-    <div class="modal-head"><span class="modal-title">Nuevo Hito</span><button class="modal-close" onclick="window.closeModal()">✕</button></div>
-    <div class="form-group"><label class="form-label">Proyecto</label>
-      <input class="form-input" id="f-proyecto" placeholder="Elige o escribe un proyecto…" list="proy-list-h" autocomplete="off"/>
-      <datalist id="proy-list-h">${[...new Set(STATE.hitos.map(h=>h.proyecto))].sort().map(p=>`<option value="${p}">`).join("")}</datalist>
+    <div class="modal-head">
+      <span class="modal-title">Editar Proyecto</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="form-group"><label class="form-label">Hito</label><input class="form-input" id="f-hito" placeholder="Descripción del hito"/></div>
+    <div class="form-group">
+      <label class="form-label">Nombre</label>
+      <input class="form-input" id="f-nombre" value="${p.nombre}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cliente</label>
+      <input class="form-input" id="f-cliente" value="${p.cliente || ""}"/>
+    </div>
+    <button class="btn-primary" onclick="saveProyecto('${id}')">💾 Guardar</button>
+    <button class="btn-danger" onclick="deleteProyecto('${id}')">🗑 Eliminar</button>
+  `);
+};
+
+window.saveProyecto = function(id) {
+  const i = STATE.proyectos.findIndex(x => x.id === id);
+  if (i < 0) return;
+  
+  STATE.proyectos[i] = {
+    ...STATE.proyectos[i],
+    nombre: document.getElementById("f-nombre").value,
+    cliente: document.getElementById("f-cliente").value
+  };
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Proyecto guardado");
+};
+
+window.deleteProyecto = function(id) {
+  if (!confirm("¿Eliminar este proyecto?")) return;
+  
+  STATE.proyectos = STATE.proyectos.filter(x => x.id !== id);
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Proyecto eliminado");
+};
+
+// ══════════════════════════════════════════════════════
+// HITOS
+// ══════════════════════════════════════════════════════
+function renderHitos() {
+  const filtrados = STATE.filtroH === "todos" 
+    ? STATE.hitos 
+    : STATE.hitos.filter(h => h.estado === STATE.filtroH);
+  
+  const isPC = window.innerWidth >= 900;
+  
+  const filtros = `
+    <div class="filter-chips">
+      <div class="filter-chip ${STATE.filtroH === 'todos' ? 'active' : ''}" onclick="setFiltroH('todos')">Todos</div>
+      <div class="filter-chip ${STATE.filtroH === 'En curso' ? 'active' : ''}" onclick="setFiltroH('En curso')">En curso</div>
+      <div class="filter-chip ${STATE.filtroH === 'Pendiente' ? 'active' : ''}" onclick="setFiltroH('Pendiente')">Pendiente</div>
+      <div class="filter-chip ${STATE.filtroH === 'Completado' ? 'active' : ''}" onclick="setFiltroH('Completado')">Completado</div>
+    </div>
+  `;
+  
+  if (isPC) {
+    const rows = filtrados.map(h => `
+      <tr onclick="editarHito('${h.id}')">
+        <td><strong>${h.hito}</strong></td>
+        <td>${h.proyecto}</td>
+        <td><span class="badge ${h.estado.toLowerCase().replace(" ", "-")}">${h.estado}</span></td>
+        <td>${h.fechaInicio || "-"}</td>
+        <td>${h.fechaFin || "-"}</td>
+        <td>${h.responsable || "-"}</td>
+      </tr>
+    `).join("");
+    
+    return `
+      <button class="btn-add" onclick="openNuevoHito()">➕ Nuevo Hito</button>
+      ${filtros}
+      <table class="pc-table">
+        <thead>
+          <tr>
+            <th>Hito</th>
+            <th>Proyecto</th>
+            <th>Estado</th>
+            <th>Inicio</th>
+            <th>Fin</th>
+            <th>Responsable</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  } else {
+    const cards = filtrados.map(h => `
+      <div class="card" onclick="editarHito('${h.id}')">
+        <div class="card-header">
+          <div class="card-title">${h.hito}</div>
+          <span class="badge ${h.estado.toLowerCase().replace(" ", "-")}">${h.estado}</span>
+        </div>
+        <div class="card-meta">
+          <span>📁 ${h.proyecto}</span>
+          ${h.fechaFin ? `<span>📅 ${h.fechaFin}</span>` : ""}
+          ${h.responsable ? `<span>👤 ${h.responsable}</span>` : ""}
+        </div>
+      </div>
+    `).join("");
+    
+    return `
+      <button class="btn-add" onclick="openNuevoHito()">➕ Nuevo Hito</button>
+      ${filtros}
+      ${cards}
+    `;
+  }
+}
+
+window.openNuevoHito = function() {
+  const proyectos = STATE.proyectos.map(p => `<option>${p.nombre}</option>`).join("");
+  
+  openModal(`
+    <div class="modal-head">
+      <span class="modal-title">Nuevo Hito</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hito</label>
+      <input class="form-input" id="f-hito" placeholder="Ej: Entrega de anteproyecto"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Proyecto</label>
+      <select class="form-select" id="f-proyecto">${proyectos}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Estado</label>
+      <select class="form-select" id="f-estado">
+        <option>Pendiente</option>
+        <option>En curso</option>
+        <option>Completado</option>
+      </select>
+    </div>
     <div class="form-row2">
-      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="f-estado">${selectOptions(ESTADOS_HITO,"A tiempo")}</select></div>
-      <div class="form-group"><label class="form-label">Prioridad</label><select class="form-select" id="f-prioridad">${selectOptions(PRIORIDADES,"Alta")}</select></div>
+      <div class="form-group">
+        <label class="form-label">Fecha Inicio</label>
+        <input class="form-input" id="f-inicio" placeholder="dd/mm/aaaa"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha Fin</label>
+        <input class="form-input" id="f-fin" placeholder="dd/mm/aaaa"/>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label">Responsable</label><select class="form-select" id="f-responsable">${selectOptions(RESPONSABLES,STATE.user)}</select></div>
-    <div class="form-group"><label class="form-label">Clasificación</label><select class="form-select" id="f-clas"><option>Público</option><option>Privado</option></select></div>
-    <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" placeholder="dd/mm/aaaa"/></div>
-    <div class="form-group"><label class="form-label">Comentario</label><textarea class="form-textarea" id="f-comentario" placeholder="Notas…"></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Responsable</label>
+      <input class="form-input" id="f-responsable" placeholder="Nombre"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comentario</label>
+      <textarea class="form-textarea" id="f-comentario" placeholder="Detalles..."></textarea>
+    </div>
     <button class="btn-primary" onclick="addHito()">➕ Agregar</button>
   `);
 };
 
-window.saveHito = function(id) {
-  const i=STATE.hitos.findIndex(x=>x.id===id);if(i<0)return;
-  const prev=STATE.hitos[i].estado;
-  STATE.hitos[i]={...STATE.hitos[i],hito:document.getElementById("f-hito").value,proyecto:document.getElementById("f-proyecto").value,estado:document.getElementById("f-estado").value,prioridad:document.getElementById("f-prioridad").value,responsable:document.getElementById("f-responsable").value,fecha:document.getElementById("f-fecha").value,comentario:document.getElementById("f-comentario").value};
-  closeModal();render();
-  const nuevo=STATE.hitos[i].estado;
-  saveData("hito_editado",`${STATE.user} cambió "${STATE.hitos[i].hito}" de ${prev} a ${nuevo}`);
-};
-
 window.addHito = function() {
-  const hito=document.getElementById("f-hito").value.trim();if(!hito){showToast("⚠️ Escribe un nombre");return;}
-  STATE.hitos.push({id:"h"+Date.now(),hito,proyecto:document.getElementById("f-proyecto").value,clasificacion:document.getElementById("f-clas").value,etapa:"Proyecto",estado:document.getElementById("f-estado").value,prioridad:document.getElementById("f-prioridad").value,responsable:document.getElementById("f-responsable").value,fecha:document.getElementById("f-fecha").value,comentario:document.getElementById("f-comentario").value});
-  closeModal();render();
-  saveData("hito_nuevo",`${STATE.user} agregó el hito "${hito}"`);
+  const hito = document.getElementById("f-hito").value.trim();
+  if (!hito) {
+    showToast("⚠️ Escribe un nombre de hito");
+    return;
+  }
+  
+  STATE.hitos.push({
+    id: "h" + Date.now(),
+    hito,
+    proyecto: document.getElementById("f-proyecto").value,
+    estado: document.getElementById("f-estado").value,
+    fechaInicio: document.getElementById("f-inicio").value,
+    fechaFin: document.getElementById("f-fin").value,
+    responsable: document.getElementById("f-responsable").value,
+    comentario: document.getElementById("f-comentario").value
+  });
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Hito agregado");
 };
 
-window.deleteHito = function(id) {
-  if(!confirm("¿Eliminar este hito?"))return;
-  const h=STATE.hitos.find(x=>x.id===id);
-  STATE.hitos=STATE.hitos.filter(x=>x.id!==id);
-  closeModal();render();
-  saveData("hito_eliminado",`${STATE.user} eliminó "${h?.hito}"`);
-};
-
-window.openEditAccion = function(id) {
-  const a=STATE.acciones.find(x=>x.id===id);if(!a)return;
-  const isAdmin=STATE.user==="Paula Herrera";
+window.editarHito = function(id) {
+  const h = STATE.hitos.find(x => x.id === id);
+  if (!h) return;
+  
+  const proyectos = STATE.proyectos.map(p => 
+    `<option ${p.nombre === h.proyecto ? "selected" : ""}>${p.nombre}</option>`
+  ).join("");
+  
+  const estados = ["Pendiente", "En curso", "Completado"].map(e =>
+    `<option ${e === h.estado ? "selected" : ""}>${e}</option>`
+  ).join("");
+  
   openModal(`
-    <div class="modal-head"><span class="modal-title">Editar Acción</span><button class="modal-close" onclick="window.closeModal()">✕</button></div>
-    <div class="form-group"><label class="form-label">Acción</label><textarea class="form-textarea" id="f-accion">${a.accion}</textarea></div>
-    <div class="form-group"><label class="form-label">Proyecto</label>
-      <input class="form-input" id="f-proyecto" value="${a.proyecto}" list="proy-list-ea" autocomplete="off"/>
-      <datalist id="proy-list-ea">${[...new Set(STATE.hitos.map(h=>h.proyecto))].sort().map(p=>`<option value="${p}">`).join("")}</datalist>
+    <div class="modal-head">
+      <span class="modal-title">Editar Hito</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hito</label>
+      <input class="form-input" id="f-hito" value="${h.hito}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Proyecto</label>
+      <select class="form-select" id="f-proyecto">${proyectos}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Estado</label>
+      <select class="form-select" id="f-estado">${estados}</select>
     </div>
     <div class="form-row2">
-      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="f-estado">${selectOptions(ESTADOS_ACCION,a.estado)}</select></div>
-      <div class="form-group"><label class="form-label">Prioridad</label><select class="form-select" id="f-prioridad">${selectOptions(PRIORIDADES,a.prioridad)}</select></div>
+      <div class="form-group">
+        <label class="form-label">Fecha Inicio</label>
+        <input class="form-input" id="f-inicio" value="${h.fechaInicio || ""}"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha Fin</label>
+        <input class="form-input" id="f-fin" value="${h.fechaFin || ""}"/>
+      </div>
     </div>
-    <div class="form-group"><label class="form-label">Responsable</label><select class="form-select" id="f-responsable">${selectOptions(RESPONSABLES,a.responsable)}</select></div>
-    <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" value="${a.fecha||""}"/></div>
-    <div class="form-group"><label class="form-label">Comentario</label><textarea class="form-textarea" id="f-comentario">${a.comentario||""}</textarea></div>
-    <button class="btn-primary" onclick="saveAccion('${id}')">💾 Guardar</button>
-    ${isAdmin?`<button class="btn-danger" onclick="deleteAccion('${id}')">🗑 Eliminar</button>`:""}
+    <div class="form-group">
+      <label class="form-label">Responsable</label>
+      <input class="form-input" id="f-responsable" value="${h.responsable || ""}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comentario</label>
+      <textarea class="form-textarea" id="f-comentario">${h.comentario || ""}</textarea>
+    </div>
+    <button class="btn-primary" onclick="saveHito('${id}')">💾 Guardar</button>
+    <button class="btn-danger" onclick="deleteHito('${id}')">🗑 Eliminar</button>
   `);
 };
 
-window.openNuevaAccion = function() {
-  const proy=proyectos();
-  openModal(`
-    <div class="modal-head"><span class="modal-title">Nueva Acción</span><button class="modal-close" onclick="window.closeModal()">✕</button></div>
-    <div class="form-group"><label class="form-label">Proyecto</label><input class="form-input" id="f-proyecto" placeholder="Nombre del proyecto" list="proyectos-list"/><datalist id="proyectos-list">${proy.map(p=>`<option value="${p}">`).join("")}</datalist></div>
-    <div class="form-group"><label class="form-label">Acción</label><textarea class="form-textarea" id="f-accion" placeholder="Descripción…"></textarea></div>
-    <div class="form-row2">
-      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="f-estado">${selectOptions(ESTADOS_ACCION,"En curso")}</select></div>
-      <div class="form-group"><label class="form-label">Prioridad</label><select class="form-select" id="f-prioridad">${selectOptions(PRIORIDADES,"Alta")}</select></div>
+window.saveHito = function(id) {
+  const i = STATE.hitos.findIndex(x => x.id === id);
+  if (i < 0) return;
+  
+  STATE.hitos[i] = {
+    ...STATE.hitos[i],
+    hito: document.getElementById("f-hito").value,
+    proyecto: document.getElementById("f-proyecto").value,
+    estado: document.getElementById("f-estado").value,
+    fechaInicio: document.getElementById("f-inicio").value,
+    fechaFin: document.getElementById("f-fin").value,
+    responsable: document.getElementById("f-responsable").value,
+    comentario: document.getElementById("f-comentario").value
+  };
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Hito guardado");
+};
+
+window.deleteHito = function(id) {
+  if (!confirm("¿Eliminar este hito?")) return;
+  
+  STATE.hitos = STATE.hitos.filter(x => x.id !== id);
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Hito eliminado");
+};
+
+// ══════════════════════════════════════════════════════
+// ACCIONES
+// ══════════════════════════════════════════════════════
+function renderAcciones() {
+  const filtradas = STATE.filtroA === "todos"
+    ? STATE.acciones
+    : STATE.acciones.filter(a => a.estado === STATE.filtroA);
+  
+  const filtros = `
+    <div class="filter-chips">
+      <div class="filter-chip ${STATE.filtroA === 'todos' ? 'active' : ''}" onclick="setFiltroA('todos')">Todos</div>
+      <div class="filter-chip ${STATE.filtroA === 'En curso' ? 'active' : ''}" onclick="setFiltroA('En curso')">En curso</div>
+      <div class="filter-chip ${STATE.filtroA === 'Pendiente' ? 'active' : ''}" onclick="setFiltroA('Pendiente')">Pendiente</div>
+      <div class="filter-chip ${STATE.filtroA === 'Bloqueada' ? 'active' : ''}" onclick="setFiltroA('Bloqueada')">Bloqueada</div>
+      <div class="filter-chip ${STATE.filtroA === 'Completada' ? 'active' : ''}" onclick="setFiltroA('Completada')">Completada</div>
     </div>
-    <div class="form-group"><label class="form-label">Responsable</label><select class="form-select" id="f-responsable">${selectOptions(RESPONSABLES,STATE.user)}</select></div>
-    <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" placeholder="dd/mm/aaaa"/></div>
-    <div class="form-group"><label class="form-label">Comentario</label><textarea class="form-textarea" id="f-comentario" placeholder="¿Bloqueo?"></textarea></div>
+  `;
+  
+  const cards = filtradas.map(a => `
+    <div class="card" onclick="editarAccion('${a.id}')">
+      <div class="card-header">
+        <div class="card-title">${a.accion}</div>
+        <span class="badge ${a.estado.toLowerCase()}">${a.estado}</span>
+      </div>
+      <div class="card-meta">
+        <span>📁 ${a.proyecto}</span>
+        ${a.prioridad ? `<span class="badge ${a.prioridad.toLowerCase()}">${a.prioridad}</span>` : ""}
+        ${a.responsable ? `<span>👤 ${a.responsable}</span>` : ""}
+        ${a.fecha ? `<span>📅 ${a.fecha}</span>` : ""}
+      </div>
+    </div>
+  `).join("");
+  
+  return `
+    <button class="btn-add" onclick="openNuevaAccion()">➕ Nueva Acción</button>
+    ${filtros}
+    ${cards}
+  `;
+}
+
+window.openNuevaAccion = function() {
+  const proyectos = STATE.proyectos.map(p => `<option>${p.nombre}</option>`).join("");
+  
+  openModal(`
+    <div class="modal-head">
+      <span class="modal-title">Nueva Acción</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Acción</label>
+      <input class="form-input" id="f-accion" placeholder="Ej: Revisar planos estructura"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Proyecto</label>
+      <select class="form-select" id="f-proyecto">${proyectos}</select>
+    </div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="f-estado">
+          <option>Pendiente</option>
+          <option>En curso</option>
+          <option>Bloqueada</option>
+          <option>Completada</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prioridad</label>
+        <select class="form-select" id="f-prioridad">
+          <option>Media</option>
+          <option>Alta</option>
+          <option>Baja</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Responsable</label>
+      <input class="form-input" id="f-responsable" placeholder="Nombre"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha</label>
+      <input class="form-input" id="f-fecha" placeholder="dd/mm/aaaa"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comentario</label>
+      <textarea class="form-textarea" id="f-comentario" placeholder="Detalles..."></textarea>
+    </div>
     <button class="btn-primary" onclick="addAccion()">➕ Agregar</button>
   `);
 };
 
-window.saveAccion = function(id) {
-  const i=STATE.acciones.findIndex(x=>x.id===id);if(i<0)return;
-  const prev=STATE.acciones[i].estado;
-  STATE.acciones[i]={...STATE.acciones[i],accion:document.getElementById("f-accion").value,proyecto:document.getElementById("f-proyecto").value,estado:document.getElementById("f-estado").value,prioridad:document.getElementById("f-prioridad").value,responsable:document.getElementById("f-responsable").value,fecha:document.getElementById("f-fecha").value,comentario:document.getElementById("f-comentario").value};
-  closeModal();render();
-  saveData("accion_editada",`${STATE.user} actualizó "${STATE.acciones[i].accion}"`);
+window.addAccion = function() {
+  const accion = document.getElementById("f-accion").value.trim();
+  if (!accion) {
+    showToast("⚠️ Escribe una descripción");
+    return;
+  }
+  
+  STATE.acciones.push({
+    id: "a" + Date.now(),
+    accion,
+    proyecto: document.getElementById("f-proyecto").value,
+    estado: document.getElementById("f-estado").value,
+    prioridad: document.getElementById("f-prioridad").value,
+    responsable: document.getElementById("f-responsable").value,
+    fecha: document.getElementById("f-fecha").value,
+    comentario: document.getElementById("f-comentario").value
+  });
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Acción agregada");
 };
 
-window.addAccion = function() {
-  const accion=document.getElementById("f-accion").value.trim();if(!accion){showToast("⚠️ Escribe una descripción");return;}
-  STATE.acciones.push({id:"a"+Date.now(),accion,proyecto:document.getElementById("f-proyecto").value,estado:document.getElementById("f-estado").value,prioridad:document.getElementById("f-prioridad").value,responsable:document.getElementById("f-responsable").value,fecha:document.getElementById("f-fecha").value,comentario:document.getElementById("f-comentario").value});
-  closeModal();render();
-  saveData("accion_nueva",`${STATE.user} agregó la acción "${accion}"`);
+window.editarAccion = function(id) {
+  const a = STATE.acciones.find(x => x.id === id);
+  if (!a) return;
+  
+  const proyectos = STATE.proyectos.map(p =>
+    `<option ${p.nombre === a.proyecto ? "selected" : ""}>${p.nombre}</option>`
+  ).join("");
+  
+  const estados = ["Pendiente", "En curso", "Bloqueada", "Completada"].map(e =>
+    `<option ${e === a.estado ? "selected" : ""}>${e}</option>`
+  ).join("");
+  
+  const prioridades = ["Alta", "Media", "Baja"].map(p =>
+    `<option ${p === a.prioridad ? "selected" : ""}>${p}</option>`
+  ).join("");
+  
+  openModal(`
+    <div class="modal-head">
+      <span class="modal-title">Editar Acción</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Acción</label>
+      <input class="form-input" id="f-accion" value="${a.accion}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Proyecto</label>
+      <select class="form-select" id="f-proyecto">${proyectos}</select>
+    </div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="f-estado">${estados}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prioridad</label>
+        <select class="form-select" id="f-prioridad">${prioridades}</select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Responsable</label>
+      <input class="form-input" id="f-responsable" value="${a.responsable || ""}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha</label>
+      <input class="form-input" id="f-fecha" value="${a.fecha || ""}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comentario</label>
+      <textarea class="form-textarea" id="f-comentario">${a.comentario || ""}</textarea>
+    </div>
+    <button class="btn-primary" onclick="saveAccion('${id}')">💾 Guardar</button>
+    <button class="btn-danger" onclick="deleteAccion('${id}')">🗑 Eliminar</button>
+  `);
+};
+
+window.saveAccion = function(id) {
+  const i = STATE.acciones.findIndex(x => x.id === id);
+  if (i < 0) return;
+  
+  STATE.acciones[i] = {
+    ...STATE.acciones[i],
+    accion: document.getElementById("f-accion").value,
+    proyecto: document.getElementById("f-proyecto").value,
+    estado: document.getElementById("f-estado").value,
+    prioridad: document.getElementById("f-prioridad").value,
+    responsable: document.getElementById("f-responsable").value,
+    fecha: document.getElementById("f-fecha").value,
+    comentario: document.getElementById("f-comentario").value
+  };
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Acción guardada");
 };
 
 window.deleteAccion = function(id) {
-  if(!confirm("¿Eliminar esta acción?"))return;
-  const a=STATE.acciones.find(x=>x.id===id);
-  STATE.acciones=STATE.acciones.filter(x=>x.id!==id);
-  closeModal();render();
-  saveData("accion_eliminada",`${STATE.user} eliminó "${a?.accion}"`);
+  if (!confirm("¿Eliminar esta acción?")) return;
+  
+  STATE.acciones = STATE.acciones.filter(x => x.id !== id);
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Acción eliminada");
 };
 
-// ADMIN TAREAS
+// ══════════════════════════════════════════════════════
+// KPIs
+// ══════════════════════════════════════════════════════
+function renderKPIs() {
+  const totalProyectos = STATE.proyectos.length;
+  const totalHitos = STATE.hitos.length;
+  const hitosCompletados = STATE.hitos.filter(h => h.estado === "Completado").length;
+  const hitosEnCurso = STATE.hitos.filter(h => h.estado === "En curso").length;
+  const totalAcciones = STATE.acciones.length;
+  const accionesCompletadas = STATE.acciones.filter(a => a.estado === "Completada").length;
+  
+  return `
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Proyectos</div>
+        <div class="kpi-value">${totalProyectos}</div>
+        <div class="kpi-subtitle">Activos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Hitos</div>
+        <div class="kpi-value">${totalHitos}</div>
+        <div class="kpi-subtitle">${hitosCompletados} completados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">En Curso</div>
+        <div class="kpi-value">${hitosEnCurso}</div>
+        <div class="kpi-subtitle">Hitos activos</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Acciones</div>
+        <div class="kpi-value">${totalAcciones}</div>
+        <div class="kpi-subtitle">${accionesCompletadas} hechas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">% Avance</div>
+        <div class="kpi-value">${totalHitos > 0 ? Math.round(hitosCompletados/totalHitos*100) : 0}%</div>
+        <div class="kpi-subtitle">Hitos totales</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Eficiencia</div>
+        <div class="kpi-value">${totalAcciones > 0 ? Math.round(accionesCompletadas/totalAcciones*100) : 0}%</div>
+        <div class="kpi-subtitle">Acciones</div>
+      </div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN
+// ══════════════════════════════════════════════════════
+function renderAdmin() {
+  const tareas = (STATE.adminTareas || []).map(t => `
+    <div class="card" onclick="editarTareaAdmin('${t.id}')">
+      <div class="card-header">
+        <div class="card-title">${t.nombre}</div>
+        <span class="badge ${t.estado.toLowerCase().replace(" ", "-")}">${t.estado}</span>
+      </div>
+      <div class="card-meta">
+        <span>📋 ${t.tipo}</span>
+        ${t.fecha ? `<span>📅 ${t.fecha}</span>` : ""}
+      </div>
+    </div>
+  `).join("");
+  
+  return `
+    <button class="btn-add" onclick="openNuevaTareaAdmin()">➕ Nueva Tarea Admin</button>
+    ${tareas}
+  `;
+}
+
 window.openNuevaTareaAdmin = function() {
   openModal(`
-    <div class="modal-head"><span class="modal-title">Nueva Tarea Admin</span><button class="modal-close" onclick="window.closeModal()">✕</button></div>
-    <div class="form-group"><label class="form-label">Tarea</label><input class="form-input" id="f-nombre" placeholder="Ej: Enviar factura proyecto X"/></div>
-    <div class="form-row2">
-      <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="f-tipo"><option>Factura</option><option>Presupuesto</option><option>Contrato</option><option>Cobro</option><option>General</option></select></div>
-      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="f-estado">${selectOptions(["Pendiente","En curso","Completada"],"Pendiente")}</select></div>
+    <div class="modal-head">
+      <span class="modal-title">Nueva Tarea Admin</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" placeholder="dd/mm/aaaa"/></div>
-    <div class="form-group"><label class="form-label">Comentario</label><textarea class="form-textarea" id="f-comentario" placeholder="Detalles…"></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Tarea</label>
+      <input class="form-input" id="f-nombre" placeholder="Ej: Enviar factura"/>
+    </div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="f-tipo">
+          <option>Factura</option>
+          <option>Presupuesto</option>
+          <option>Contrato</option>
+          <option>Cobro</option>
+          <option>General</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="f-estado">
+          <option>Pendiente</option>
+          <option>En curso</option>
+          <option>Completada</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha</label>
+      <input class="form-input" id="f-fecha" placeholder="dd/mm/aaaa"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comentario</label>
+      <textarea class="form-textarea" id="f-comentario" placeholder="Detalles..."></textarea>
+    </div>
     <button class="btn-primary" onclick="addTareaAdmin()">➕ Agregar</button>
   `);
 };
 
 window.addTareaAdmin = function() {
-  const n=document.getElementById("f-nombre").value.trim();if(!n){showToast("⚠️ Escribe un nombre");return;}
-  if(!STATE.adminTareas)STATE.adminTareas=[];
-  STATE.adminTareas.push({id:"ad"+Date.now(),nombre:n,tipo:document.getElementById("f-tipo").value,estado:document.getElementById("f-estado").value,fecha:document.getElementById("f-fecha").value,comentario:document.getElementById("f-comentario").value});
-  closeModal();render();saveData("admin_nueva",`Paula agregó tarea admin "${n}"`);
-};
-
-window.eliminarTareaAdmin = function(id) {
-  if(!confirm("¿Eliminar?"))return;
-  STATE.adminTareas=STATE.adminTareas.filter(t=>t.id!==id);
-  render();saveData("admin_eliminada","Paula eliminó tarea admin");
+  const nombre = document.getElementById("f-nombre").value.trim();
+  if (!nombre) {
+    showToast("⚠️ Escribe un nombre");
+    return;
+  }
+  
+  if (!STATE.adminTareas) STATE.adminTareas = [];
+  
+  STATE.adminTareas.push({
+    id: "ad" + Date.now(),
+    nombre,
+    tipo: document.getElementById("f-tipo").value,
+    estado: document.getElementById("f-estado").value,
+    fecha: document.getElementById("f-fecha").value,
+    comentario: document.getElementById("f-comentario").value
+  });
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Tarea agregada");
 };
 
 window.editarTareaAdmin = function(id) {
-  const t=STATE.adminTareas.find(x=>x.id===id);if(!t)return;
+  const t = STATE.adminTareas.find(x => x.id === id);
+  if (!t) return;
+  
+  const tipos = ["Factura", "Presupuesto", "Contrato", "Cobro", "General"].map(tipo =>
+    `<option ${tipo === t.tipo ? "selected" : ""}>${tipo}</option>`
+  ).join("");
+  
+  const estados = ["Pendiente", "En curso", "Completada"].map(e =>
+    `<option ${e === t.estado ? "selected" : ""}>${e}</option>`
+  ).join("");
+  
   openModal(`
-    <div class="modal-head"><span class="modal-title">Editar Tarea</span><button class="modal-close" onclick="window.closeModal()">✕</button></div>
-    <div class="form-group"><label class="form-label">Tarea</label><input class="form-input" id="f-nombre" value="${t.nombre}"/></div>
-    <div class="form-row2">
-      <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="f-tipo">${selectOptions(["Factura","Presupuesto","Contrato","Cobro","General"],t.tipo)}</select></div>
-      <div class="form-group"><label class="form-label">Estado</label><select class="form-select" id="f-estado">${selectOptions(["Pendiente","En curso","Completada"],t.estado)}</select></div>
+    <div class="modal-head">
+      <span class="modal-title">Editar Tarea</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" value="${t.fecha||""}"/></div>
-    <div class="form-group"><label class="form-label">Comentario</label><textarea class="form-textarea" id="f-comentario">${t.comentario||""}</textarea></div>
+    <div class="form-group">
+      <label class="form-label">Tarea</label>
+      <input class="form-input" id="f-nombre" value="${t.nombre}"/>
+    </div>
+    <div class="form-row2">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="f-tipo">${tipos}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="f-estado">${estados}</select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha</label>
+      <input class="form-input" id="f-fecha" value="${t.fecha || ""}"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Comentario</label>
+      <textarea class="form-textarea" id="f-comentario">${t.comentario || ""}</textarea>
+    </div>
     <button class="btn-primary" onclick="saveTareaAdmin('${id}')">💾 Guardar</button>
     <button class="btn-danger" onclick="eliminarTareaAdmin('${id}')">🗑 Eliminar</button>
   `);
 };
 
 window.saveTareaAdmin = function(id) {
-  const i=STATE.adminTareas.findIndex(x=>x.id===id);if(i<0)return;
-  STATE.adminTareas[i]={...STATE.adminTareas[i],nombre:document.getElementById("f-nombre").value,tipo:document.getElementById("f-tipo").value,estado:document.getElementById("f-estado").value,fecha:document.getElementById("f-fecha").value,comentario:document.getElementById("f-comentario").value};
-  closeModal();render();saveData("admin_editada","Paula editó tarea admin");
+  const i = STATE.adminTareas.findIndex(x => x.id === id);
+  if (i < 0) return;
+  
+  STATE.adminTareas[i] = {
+    ...STATE.adminTareas[i],
+    nombre: document.getElementById("f-nombre").value,
+    tipo: document.getElementById("f-tipo").value,
+    estado: document.getElementById("f-estado").value,
+    fecha: document.getElementById("f-fecha").value,
+    comentario: document.getElementById("f-comentario").value
+  };
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Tarea guardada");
 };
 
-// ── NAVEGACIÓN ────────────────────────────────────────
-window.switchTab = function(tab,el) {
-  STATE.tab=tab;
-  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
-  el.classList.add("active");render();
+window.eliminarTareaAdmin = function(id) {
+  if (!confirm("¿Eliminar?")) return;
+  
+  STATE.adminTareas = STATE.adminTareas.filter(t => t.id !== id);
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast("✅ Tarea eliminada");
 };
-window.setFiltroH = function(f){STATE.filtroH=f;render();};
-window.setFiltroA = function(f){STATE.filtroA=f;render();};
 
-// ── DATOS DEMO ────────────────────────────────────────
-const HITOS_DEMO = [];
-const ACCIONES_DEMO = [];
+// ══════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════
+function daysDiff(dateStr) {
+  if (!dateStr) return 999;
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return 999;
+  const d = new Date(parts[2], parts[1] - 1, parts[0]);
+  const today = new Date();
+  const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+  return diff;
+}
 
-// ── INIT ──────────────────────────────────────────────
-window.addEventListener("resize", () => { if(STATE.user) render(); });
-window.addEventListener("DOMContentLoaded", () => {
-  setTimeout(() => {
-    document.getElementById("loading").style.display="none";
-    document.getElementById("app").style.display="block";
-    const savedUser=localStorage.getItem("myh-user");
-    const savedRole=localStorage.getItem("myh-role");
+function openModal(html) {
+  document.getElementById("modal").innerHTML = `<div class="modal-box">${html}</div>`;
+  document.getElementById("modal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+window.closeModal = closeModal;
+
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.style.display = "block";
+  setTimeout(() => toast.style.display = "none", 3000);
+}
+
+window.switchTab = function(tab, el) {
+  STATE.tab = tab;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  el.classList.add("active");
+  render();
+};
+
+window.setFiltroH = function(f) {
+  STATE.filtroH = f;
+  render();
+};
+
+window.setFiltroA = function(f) {
+  STATE.filtroA = f;
+  render();
+};
+
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
+window.addEventListener("resize", () => {
+  if (STATE.user) render();
+});
+
+window.addEventListener("DOMContentLoaded", async () => {
+  setTimeout(async () => {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    
+    const savedUser = localStorage.getItem("myh-user");
+    const savedRole = localStorage.getItem("myh-role");
+    
     if (savedUser && USUARIOS[savedUser]) {
-      STATE.user=savedUser;
-      STATE.role=savedRole||"equipo";
+      STATE.user = savedUser;
+      STATE.role = savedRole || "equipo";
+      
+      await loadFromFirebase();
+      listenToFirebase();
+      
       showMain();
-      loadData();
-      mostrarBannerNotif();
+      render();
+      showToast(`👋 Bienvenid@ ${savedUser.split(" ")[0]}!`);
     } else {
-      document.getElementById("login").style.display="flex";
+      document.getElementById("login").style.display = "flex";
     }
-  },1200);
+  }, 1200);
 });
 </script>
 </body>
