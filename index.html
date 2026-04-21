@@ -13,6 +13,10 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   
+  <!-- jsPDF para generar informes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+  
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -127,15 +131,63 @@
     .card-title{font-size:14px;font-weight:700;color:var(--text);flex:1}
     .badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap}
     .badge.completado{background:var(--green-l);color:#15803d}
+    .badge.entregado{background:var(--green-l);color:#15803d}
+    .badge.a-tiempo{background:var(--blue-l);color:#1e40af}
     .badge.en-curso{background:var(--blue-l);color:#1e40af}
     .badge.pendiente{background:var(--yellow-l);color:#a16207}
+    .badge.en-riesgo{background:var(--yellow-l);color:#a16207}
     .badge.bloqueada{background:var(--red-l);color:#b91c1c}
+    .badge.retrasado{background:var(--red-l);color:#b91c1c}
     .badge.alta{background:var(--red-l);color:#b91c1c}
     .badge.media{background:var(--yellow-l);color:#a16207}
     .badge.baja{background:var(--green-l);color:#15803d}
     .card-meta{font-size:11px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
     
-    /* BOTONES */
+    /* DASHBOARD "HOY" */
+    .dashboard-section{margin-bottom:20px}
+    .dashboard-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .dashboard-count{font-size:12px;background:var(--indigo-l);color:var(--indigo);padding:2px 8px;border-radius:10px;font-weight:700}
+    .alert-card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:4px solid var(--red);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .alert-card.warning{border-left-color:var(--yellow)}
+    .alert-card.info{border-left-color:var(--blue)}
+    .alert-card.success{border-left-color:var(--green)}
+    .alert-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+    .alert-meta{font-size:11px;color:var(--sub);display:flex;gap:10px;flex-wrap:wrap}
+    .dashboard-empty{text-align:center;padding:20px;color:var(--muted);font-size:13px;font-style:italic}
+    .dashboard-hero{background:linear-gradient(135deg,var(--navy),#1e293b);color:#fff;border-radius:16px;padding:16px 18px;margin-bottom:16px}
+    .dashboard-hero-title{font-size:18px;font-weight:800;margin-bottom:3px}
+    .dashboard-hero-sub{font-size:12px;opacity:.8}
+    .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+    .mini-stat{background:#fff;border-radius:12px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .mini-stat-value{font-size:22px;font-weight:800;line-height:1}
+    .mini-stat-value.red{color:var(--red)}
+    .mini-stat-value.yellow{color:#ca8a04}
+    .mini-stat-value.green{color:var(--green)}
+    .mini-stat-value.blue{color:var(--blue)}
+    .mini-stat-label{font-size:11px;color:var(--sub);margin-top:4px;font-weight:600}
+    
+    /* VISTA EQUIPO */
+    .persona-card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer}
+    .persona-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .persona-nombre{font-size:15px;font-weight:700;color:var(--text)}
+    .persona-total{font-size:12px;background:var(--indigo-l);color:var(--indigo);padding:3px 10px;border-radius:10px;font-weight:700}
+    .persona-stats{display:flex;gap:12px;flex-wrap:wrap}
+    .persona-stat{font-size:11px;color:var(--sub)}
+    .persona-stat strong{color:var(--text);font-weight:700;font-size:13px}
+    .persona-stat.red strong{color:var(--red)}
+    .persona-stat.yellow strong{color:#ca8a04}
+    .persona-stat.green strong{color:var(--green)}
+    
+    /* INFORMES */
+    .informe-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:transform .15s,box-shadow .15s}
+    .informe-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+    .informe-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+    .informe-icon{font-size:28px}
+    .informe-title{font-size:15px;font-weight:700;color:var(--text)}
+    .informe-desc{font-size:12px;color:var(--sub);line-height:1.4}
+    .informe-selector{background:#fff;border-radius:12px;padding:14px;margin-top:10px;display:none;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .informe-selector.active{display:block}
+    .btn-descargar{background:var(--green);color:#fff;padding:10px 16px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px}
     .btn-add{width:100%;padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px}
     .btn-primary{width:100%;padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
     .btn-danger{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
@@ -262,10 +314,24 @@ const USUARIOS = {
   "José Halty": "myh2024"
 };
 
+// Lista de responsables del equipo (para selectores)
+const RESPONSABLES = [
+  "Paula Herrera",
+  "Juan Pablo Torres",
+  "Rodrigo Escobar",
+  "Carla Vergara",
+  "Constanza Borquez",
+  "Martin Diaz"
+];
+
+// Estados tipo semáforo
+const ESTADOS_HITO = ["A tiempo", "En riesgo", "Retrasado", "Entregado", "En curso", "Pendiente", "Completado"];
+const ESTADOS_ACCION = ["Pendiente", "En curso", "Bloqueada", "Completada"];
+
 let STATE = {
   user: null,
   role: "equipo",
-  tab: "proyectos",
+  tab: "hoy",
   proyectos: [],
   hitos: [],
   acciones: [],
@@ -430,10 +496,13 @@ function renderHeader() {
 
 function renderTabs() {
   const tabs = [
+    { id: "hoy", icon: "🌟", label: "Hoy" },
     { id: "proyectos", icon: "🏗️", label: "Proyectos" },
     { id: "hitos", icon: "🎯", label: "Hitos" },
     { id: "acciones", icon: "✅", label: "Acciones" },
-    { id: "kpis", icon: "📊", label: "KPIs" }
+    { id: "equipo", icon: "👥", label: "Equipo" },
+    { id: "kpis", icon: "📊", label: "KPIs" },
+    { id: "informes", icon: "📄", label: "Informes" }
   ];
   
   if (STATE.role === "admin") {
@@ -451,10 +520,13 @@ function renderTabs() {
 function renderContent() {
   const c = document.getElementById("content");
   
-  if (STATE.tab === "proyectos") c.innerHTML = renderProyectos();
+  if (STATE.tab === "hoy") c.innerHTML = renderHoy();
+  else if (STATE.tab === "proyectos") c.innerHTML = renderProyectos();
   else if (STATE.tab === "hitos") c.innerHTML = renderHitos();
   else if (STATE.tab === "acciones") c.innerHTML = renderAcciones();
+  else if (STATE.tab === "equipo") c.innerHTML = renderEquipo();
   else if (STATE.tab === "kpis") c.innerHTML = renderKPIs();
+  else if (STATE.tab === "informes") c.innerHTML = renderInformes();
   else if (STATE.tab === "admin") c.innerHTML = renderAdmin();
 }
 
@@ -586,9 +658,10 @@ function renderHitos() {
   const filtros = `
     <div class="filter-chips">
       <div class="filter-chip ${STATE.filtroH === 'todos' ? 'active' : ''}" onclick="setFiltroH('todos')">Todos</div>
-      <div class="filter-chip ${STATE.filtroH === 'En curso' ? 'active' : ''}" onclick="setFiltroH('En curso')">En curso</div>
-      <div class="filter-chip ${STATE.filtroH === 'Pendiente' ? 'active' : ''}" onclick="setFiltroH('Pendiente')">Pendiente</div>
-      <div class="filter-chip ${STATE.filtroH === 'Completado' ? 'active' : ''}" onclick="setFiltroH('Completado')">Completado</div>
+      <div class="filter-chip ${STATE.filtroH === 'A tiempo' ? 'active' : ''}" onclick="setFiltroH('A tiempo')">🟢 A tiempo</div>
+      <div class="filter-chip ${STATE.filtroH === 'En riesgo' ? 'active' : ''}" onclick="setFiltroH('En riesgo')">🟡 En riesgo</div>
+      <div class="filter-chip ${STATE.filtroH === 'Retrasado' ? 'active' : ''}" onclick="setFiltroH('Retrasado')">🔴 Retrasado</div>
+      <div class="filter-chip ${STATE.filtroH === 'Entregado' ? 'active' : ''}" onclick="setFiltroH('Entregado')">✅ Entregado</div>
     </div>
   `;
   
@@ -663,6 +736,10 @@ window.openNuevoHito = function() {
     <div class="form-group">
       <label class="form-label">Estado</label>
       <select class="form-select" id="f-estado">
+        <option>A tiempo</option>
+        <option>En riesgo</option>
+        <option>Retrasado</option>
+        <option>Entregado</option>
         <option>Pendiente</option>
         <option>En curso</option>
         <option>Completado</option>
@@ -680,7 +757,10 @@ window.openNuevoHito = function() {
     </div>
     <div class="form-group">
       <label class="form-label">Responsable</label>
-      <input class="form-input" id="f-responsable" placeholder="Nombre"/>
+      <select class="form-select" id="f-responsable">
+        <option value="">Sin asignar</option>
+        ${RESPONSABLES.map(r => `<option value="${r}">${r}</option>`).join("")}
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Comentario</label>
@@ -722,7 +802,7 @@ window.editarHito = function(id) {
     `<option ${p.nombre === h.proyecto ? "selected" : ""}>${p.nombre}</option>`
   ).join("");
   
-  const estados = ["Pendiente", "En curso", "Completado"].map(e =>
+  const estados = ["A tiempo", "En riesgo", "Retrasado", "Entregado", "Pendiente", "En curso", "Completado"].map(e =>
     `<option ${e === h.estado ? "selected" : ""}>${e}</option>`
   ).join("");
   
@@ -755,7 +835,10 @@ window.editarHito = function(id) {
     </div>
     <div class="form-group">
       <label class="form-label">Responsable</label>
-      <input class="form-input" id="f-responsable" value="${h.responsable || ""}"/>
+      <select class="form-select" id="f-responsable">
+        <option value="">Sin asignar</option>
+        ${RESPONSABLES.map(r => `<option value="${r}" ${r === h.responsable ? "selected" : ""}>${r}</option>`).join("")}
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Comentario</label>
@@ -874,7 +957,10 @@ window.openNuevaAccion = function() {
     </div>
     <div class="form-group">
       <label class="form-label">Responsable</label>
-      <input class="form-input" id="f-responsable" placeholder="Nombre"/>
+      <select class="form-select" id="f-responsable">
+        <option value="">Sin asignar</option>
+        ${RESPONSABLES.map(r => `<option value="${r}">${r}</option>`).join("")}
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Fecha</label>
@@ -953,7 +1039,10 @@ window.editarAccion = function(id) {
     </div>
     <div class="form-group">
       <label class="form-label">Responsable</label>
-      <input class="form-input" id="f-responsable" value="${a.responsable || ""}"/>
+      <select class="form-select" id="f-responsable">
+        <option value="">Sin asignar</option>
+        ${RESPONSABLES.map(r => `<option value="${r}" ${r === a.responsable ? "selected" : ""}>${r}</option>`).join("")}
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label">Fecha</label>
@@ -998,6 +1087,639 @@ window.deleteAccion = function(id) {
   saveToFirebase();
   showToast("✅ Acción eliminada");
 };
+
+// ══════════════════════════════════════════════════════
+// DASHBOARD "HOY" - Lo que necesita tu atención
+// ══════════════════════════════════════════════════════
+function renderHoy() {
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const atrasados = STATE.hitos.filter(h => {
+    if (!h.fechaFin) return h.estado === "Retrasado";
+    const d = daysDiff(h.fechaFin);
+    return (d < 0 && h.estado !== "Entregado" && h.estado !== "Completado") || h.estado === "Retrasado";
+  });
+  
+  const enRiesgo = STATE.hitos.filter(h => {
+    if (!h.fechaFin) return h.estado === "En riesgo";
+    const d = daysDiff(h.fechaFin);
+    return (d >= 0 && d <= 7 && h.estado !== "Entregado" && h.estado !== "Completado") || h.estado === "En riesgo";
+  });
+  
+  const venceHoy = STATE.hitos.filter(h => {
+    if (!h.fechaFin) return false;
+    const d = daysDiff(h.fechaFin);
+    return d === 0 && h.estado !== "Entregado" && h.estado !== "Completado";
+  });
+  
+  const accionesPendientes = STATE.acciones.filter(a => 
+    a.estado !== "Completada" && a.estado !== "Entregado"
+  );
+  
+  // Resumen por responsable
+  const porResponsable = {};
+  RESPONSABLES.forEach(r => {
+    porResponsable[r] = {
+      hitos: 0,
+      atrasados: 0,
+      enRiesgo: 0,
+      acciones: 0
+    };
+  });
+  
+  STATE.hitos.forEach(h => {
+    if (h.responsable && porResponsable[h.responsable]) {
+      if (h.estado !== "Entregado" && h.estado !== "Completado") {
+        porResponsable[h.responsable].hitos++;
+        if (h.estado === "Retrasado" || (h.fechaFin && daysDiff(h.fechaFin) < 0)) {
+          porResponsable[h.responsable].atrasados++;
+        }
+        if (h.estado === "En riesgo") {
+          porResponsable[h.responsable].enRiesgo++;
+        }
+      }
+    }
+  });
+  
+  STATE.acciones.forEach(a => {
+    if (a.responsable && porResponsable[a.responsable] && a.estado !== "Completada") {
+      porResponsable[a.responsable].acciones++;
+    }
+  });
+  
+  const fechaHoy = hoy.toLocaleDateString('es-CL', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  
+  return `
+    <div class="dashboard-hero">
+      <div class="dashboard-hero-title">👋 Hola, ${STATE.user.split(" ")[0]}</div>
+      <div class="dashboard-hero-sub">${fechaHoy}</div>
+    </div>
+    
+    <div class="dashboard-grid">
+      <div class="mini-stat">
+        <div class="mini-stat-value red">${atrasados.length}</div>
+        <div class="mini-stat-label">🔴 Atrasados</div>
+      </div>
+      <div class="mini-stat">
+        <div class="mini-stat-value yellow">${enRiesgo.length}</div>
+        <div class="mini-stat-label">🟡 En riesgo</div>
+      </div>
+      <div class="mini-stat">
+        <div class="mini-stat-value blue">${venceHoy.length}</div>
+        <div class="mini-stat-label">📅 Vencen hoy</div>
+      </div>
+      <div class="mini-stat">
+        <div class="mini-stat-value green">${accionesPendientes.length}</div>
+        <div class="mini-stat-label">✅ Acciones</div>
+      </div>
+    </div>
+    
+    ${atrasados.length > 0 ? `
+      <div class="dashboard-section">
+        <div class="dashboard-title">
+          🔴 Atrasados
+          <span class="dashboard-count">${atrasados.length}</span>
+        </div>
+        ${atrasados.slice(0, 10).map(h => `
+          <div class="alert-card" onclick="STATE.tab='hitos';render();setTimeout(()=>editarHito('${h.id}'),100)">
+            <div class="alert-title">${h.hito}</div>
+            <div class="alert-meta">
+              <span>📁 ${h.proyecto}</span>
+              ${h.responsable ? `<span>👤 ${h.responsable}</span>` : ""}
+              ${h.fechaFin ? `<span>📅 ${h.fechaFin}</span>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    ` : ""}
+    
+    ${enRiesgo.length > 0 ? `
+      <div class="dashboard-section">
+        <div class="dashboard-title">
+          🟡 En riesgo (próximos 7 días)
+          <span class="dashboard-count">${enRiesgo.length}</span>
+        </div>
+        ${enRiesgo.slice(0, 10).map(h => `
+          <div class="alert-card warning" onclick="STATE.tab='hitos';render();setTimeout(()=>editarHito('${h.id}'),100)">
+            <div class="alert-title">${h.hito}</div>
+            <div class="alert-meta">
+              <span>📁 ${h.proyecto}</span>
+              ${h.responsable ? `<span>👤 ${h.responsable}</span>` : ""}
+              ${h.fechaFin ? `<span>📅 ${h.fechaFin}</span>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    ` : ""}
+    
+    ${venceHoy.length > 0 ? `
+      <div class="dashboard-section">
+        <div class="dashboard-title">
+          📅 Vencen hoy
+          <span class="dashboard-count">${venceHoy.length}</span>
+        </div>
+        ${venceHoy.map(h => `
+          <div class="alert-card info" onclick="STATE.tab='hitos';render();setTimeout(()=>editarHito('${h.id}'),100)">
+            <div class="alert-title">${h.hito}</div>
+            <div class="alert-meta">
+              <span>📁 ${h.proyecto}</span>
+              ${h.responsable ? `<span>👤 ${h.responsable}</span>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    ` : ""}
+    
+    <div class="dashboard-section">
+      <div class="dashboard-title">
+        👥 Carga del equipo
+      </div>
+      ${RESPONSABLES.map(r => {
+        const data = porResponsable[r];
+        const total = data.hitos + data.acciones;
+        if (total === 0) return "";
+        return `
+          <div class="persona-card" onclick="STATE.tab='equipo';render()">
+            <div class="persona-header">
+              <div class="persona-nombre">${r}</div>
+              <div class="persona-total">${total} tareas</div>
+            </div>
+            <div class="persona-stats">
+              <div class="persona-stat"><strong>${data.hitos}</strong> hitos</div>
+              ${data.atrasados > 0 ? `<div class="persona-stat red">🔴 <strong>${data.atrasados}</strong> atrasados</div>` : ""}
+              ${data.enRiesgo > 0 ? `<div class="persona-stat yellow">🟡 <strong>${data.enRiesgo}</strong> en riesgo</div>` : ""}
+              <div class="persona-stat"><strong>${data.acciones}</strong> acciones</div>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+    
+    ${atrasados.length === 0 && enRiesgo.length === 0 && venceHoy.length === 0 ? `
+      <div class="dashboard-empty">
+        ✨ ¡Todo bajo control! No hay tareas urgentes.
+      </div>
+    ` : ""}
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+// VISTA "EQUIPO" - Resumen por persona
+// ══════════════════════════════════════════════════════
+function renderEquipo() {
+  const personas = {};
+  RESPONSABLES.forEach(r => {
+    personas[r] = {
+      hitos: [],
+      acciones: []
+    };
+  });
+  
+  STATE.hitos.forEach(h => {
+    if (h.responsable && personas[h.responsable]) {
+      personas[h.responsable].hitos.push(h);
+    }
+  });
+  
+  STATE.acciones.forEach(a => {
+    if (a.responsable && personas[a.responsable]) {
+      personas[a.responsable].acciones.push(a);
+    }
+  });
+  
+  return `
+    <div class="dashboard-hero">
+      <div class="dashboard-hero-title">👥 Equipo MyH</div>
+      <div class="dashboard-hero-sub">Tareas asignadas a cada persona</div>
+    </div>
+    
+    ${RESPONSABLES.map(r => {
+      const data = personas[r];
+      const pendientes = data.hitos.filter(h => h.estado !== "Entregado" && h.estado !== "Completado");
+      const atrasados = pendientes.filter(h => h.estado === "Retrasado" || (h.fechaFin && daysDiff(h.fechaFin) < 0));
+      const enRiesgo = pendientes.filter(h => h.estado === "En riesgo");
+      const aTiempo = pendientes.filter(h => h.estado === "A tiempo" || h.estado === "En curso" || h.estado === "Pendiente");
+      const accionesPend = data.acciones.filter(a => a.estado !== "Completada");
+      
+      return `
+        <div class="dashboard-section">
+          <div class="persona-card">
+            <div class="persona-header">
+              <div class="persona-nombre">👤 ${r}</div>
+              <div class="persona-total">${pendientes.length + accionesPend.length} tareas</div>
+            </div>
+            <div class="persona-stats">
+              ${atrasados.length > 0 ? `<div class="persona-stat red">🔴 <strong>${atrasados.length}</strong> atrasados</div>` : ""}
+              ${enRiesgo.length > 0 ? `<div class="persona-stat yellow">🟡 <strong>${enRiesgo.length}</strong> en riesgo</div>` : ""}
+              ${aTiempo.length > 0 ? `<div class="persona-stat green">🟢 <strong>${aTiempo.length}</strong> a tiempo</div>` : ""}
+              <div class="persona-stat"><strong>${accionesPend.length}</strong> acciones</div>
+            </div>
+          </div>
+          
+          ${pendientes.length > 0 ? `
+            <div style="margin-top:10px">
+              ${pendientes.slice(0, 5).map(h => `
+                <div class="card" onclick="editarHito('${h.id}')">
+                  <div class="card-header">
+                    <div class="card-title">${h.hito}</div>
+                    <span class="badge ${(h.estado || "").toLowerCase().replace(/ /g,"-")}">${h.estado || "-"}</span>
+                  </div>
+                  <div class="card-meta">
+                    <span>📁 ${h.proyecto}</span>
+                    ${h.fechaFin ? `<span>📅 ${h.fechaFin}</span>` : ""}
+                  </div>
+                </div>
+              `).join("")}
+              ${pendientes.length > 5 ? `<div style="text-align:center;padding:8px;color:var(--sub);font-size:12px">... y ${pendientes.length - 5} más</div>` : ""}
+            </div>
+          ` : `<div class="dashboard-empty">Sin tareas pendientes</div>`}
+        </div>
+      `;
+    }).join("")}
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+// INFORMES - Descargar PDFs
+// ══════════════════════════════════════════════════════
+function renderInformes() {
+  const proyectosOptions = STATE.proyectos.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join("");
+  const responsablesOptions = RESPONSABLES.map(r => `<option value="${r}">${r}</option>`).join("");
+  
+  return `
+    <div class="dashboard-hero">
+      <div class="dashboard-hero-title">📄 Informes PDF</div>
+      <div class="dashboard-hero-sub">Descarga reportes para revisar o compartir</div>
+    </div>
+    
+    <div class="informe-card" onclick="generarInformeEjecutivo()">
+      <div class="informe-header">
+        <div class="informe-icon">📊</div>
+        <div class="informe-title">Resumen Ejecutivo</div>
+      </div>
+      <div class="informe-desc">Panorama general de todos los proyectos: hitos, estados, avances y alertas.</div>
+    </div>
+    
+    <div class="informe-card" onclick="toggleSelector('sel-proyecto')">
+      <div class="informe-header">
+        <div class="informe-icon">🏗️</div>
+        <div class="informe-title">Informe por Proyecto</div>
+      </div>
+      <div class="informe-desc">Estado completo de un proyecto específico con todos sus hitos y acciones.</div>
+      <div class="informe-selector" id="sel-proyecto">
+        <label class="form-label">Selecciona un proyecto</label>
+        <select class="form-select" id="f-proyecto-informe">
+          <option value="">-- Elegir --</option>
+          ${proyectosOptions}
+        </select>
+        <button class="btn-descargar" onclick="event.stopPropagation();generarInformeProyecto()">📥 Descargar PDF</button>
+      </div>
+    </div>
+    
+    <div class="informe-card" onclick="toggleSelector('sel-persona')">
+      <div class="informe-header">
+        <div class="informe-icon">👤</div>
+        <div class="informe-title">Informe por Persona</div>
+      </div>
+      <div class="informe-desc">Tareas asignadas a un responsable específico del equipo.</div>
+      <div class="informe-selector" id="sel-persona">
+        <label class="form-label">Selecciona una persona</label>
+        <select class="form-select" id="f-persona-informe">
+          <option value="">-- Elegir --</option>
+          ${responsablesOptions}
+        </select>
+        <button class="btn-descargar" onclick="event.stopPropagation();generarInformePersona()">📥 Descargar PDF</button>
+      </div>
+    </div>
+    
+    <div class="informe-card" onclick="generarInformeAtrasados()">
+      <div class="informe-header">
+        <div class="informe-icon">🚨</div>
+        <div class="informe-title">Informe de Atrasados y En Riesgo</div>
+      </div>
+      <div class="informe-desc">Solo las tareas críticas que requieren atención urgente.</div>
+    </div>
+  `;
+}
+
+window.toggleSelector = function(id) {
+  const sel = document.getElementById(id);
+  document.querySelectorAll(".informe-selector").forEach(s => {
+    if (s.id !== id) s.classList.remove("active");
+  });
+  sel.classList.toggle("active");
+};
+
+// ══════════════════════════════════════════════════════
+// GENERADORES DE PDF
+// ══════════════════════════════════════════════════════
+function iniciarPDF(titulo) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  
+  // Header con colores MyH
+  doc.setFillColor(15, 23, 42);
+  doc.rect(0, 0, 210, 30, "F");
+  
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("MyH Arquitectos", 14, 14);
+  
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(titulo, 14, 22);
+  
+  doc.setTextColor(100, 116, 139);
+  doc.setFontSize(9);
+  const hoy = new Date().toLocaleDateString('es-CL', {day:'numeric', month:'long', year:'numeric'});
+  doc.text(`Generado: ${hoy}`, 140, 22);
+  
+  doc.setTextColor(0, 0, 0);
+  return doc;
+}
+
+window.generarInformeEjecutivo = function() {
+  const doc = iniciarPDF("Resumen Ejecutivo");
+  let y = 40;
+  
+  // Estadísticas generales
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text("📊 Panorama General", 14, y);
+  y += 8;
+  
+  const totalProyectos = STATE.proyectos.length;
+  const totalHitos = STATE.hitos.length;
+  const atrasados = STATE.hitos.filter(h => h.estado === "Retrasado" || (h.fechaFin && daysDiff(h.fechaFin) < 0 && h.estado !== "Entregado" && h.estado !== "Completado")).length;
+  const enRiesgo = STATE.hitos.filter(h => h.estado === "En riesgo").length;
+  const completados = STATE.hitos.filter(h => h.estado === "Entregado" || h.estado === "Completado").length;
+  const avance = totalHitos > 0 ? Math.round(completados / totalHitos * 100) : 0;
+  
+  doc.autoTable({
+    startY: y,
+    head: [["Métrica", "Valor"]],
+    body: [
+      ["Proyectos activos", totalProyectos.toString()],
+      ["Total de hitos", totalHitos.toString()],
+      ["Hitos completados", `${completados} (${avance}%)`],
+      ["Hitos atrasados", atrasados.toString()],
+      ["Hitos en riesgo", enRiesgo.toString()],
+      ["Acciones pendientes", STATE.acciones.filter(a => a.estado !== "Completada").length.toString()]
+    ],
+    theme: "striped",
+    headStyles: { fillColor: [99, 102, 241] }
+  });
+  
+  y = doc.lastAutoTable.finalY + 12;
+  
+  // Proyectos
+  if (STATE.proyectos.length > 0) {
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("🏗️ Proyectos", 14, y);
+    y += 6;
+    
+    const proyectosData = STATE.proyectos.map(p => {
+      const hitos = STATE.hitos.filter(h => h.proyecto === p.nombre);
+      const comp = hitos.filter(h => h.estado === "Entregado" || h.estado === "Completado").length;
+      return [p.nombre, p.cliente || "-", `${comp}/${hitos.length}`, STATE.acciones.filter(a => a.proyecto === p.nombre).length.toString()];
+    });
+    
+    doc.autoTable({
+      startY: y,
+      head: [["Proyecto", "Cliente", "Hitos", "Acciones"]],
+      body: proyectosData,
+      theme: "striped",
+      headStyles: { fillColor: [99, 102, 241] }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+  
+  // Hitos críticos
+  const criticos = STATE.hitos.filter(h => 
+    h.estado === "Retrasado" || h.estado === "En riesgo" ||
+    (h.fechaFin && daysDiff(h.fechaFin) < 0 && h.estado !== "Entregado")
+  );
+  
+  if (criticos.length > 0) {
+    if (y > 230) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("🚨 Hitos que requieren atención", 14, y);
+    y += 6;
+    
+    doc.autoTable({
+      startY: y,
+      head: [["Hito", "Proyecto", "Estado", "Fecha", "Responsable"]],
+      body: criticos.map(h => [h.hito, h.proyecto, h.estado || "-", h.fechaFin || "-", h.responsable || "-"]),
+      theme: "striped",
+      headStyles: { fillColor: [239, 68, 68] },
+      styles: { fontSize: 8 }
+    });
+  }
+  
+  doc.save(`Resumen_Ejecutivo_${fechaArchivo()}.pdf`);
+  showToast("📥 PDF descargado");
+};
+
+window.generarInformeProyecto = function() {
+  const proyecto = document.getElementById("f-proyecto-informe").value;
+  if (!proyecto) {
+    showToast("⚠️ Selecciona un proyecto");
+    return;
+  }
+  
+  const doc = iniciarPDF(`Proyecto: ${proyecto}`);
+  let y = 40;
+  
+  const p = STATE.proyectos.find(x => x.nombre === proyecto);
+  const hitos = STATE.hitos.filter(h => h.proyecto === proyecto);
+  const acciones = STATE.acciones.filter(a => a.proyecto === proyecto);
+  
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Cliente: ${p?.cliente || "-"}`, 14, y);
+  y += 10;
+  
+  // Hitos
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(`🎯 Hitos (${hitos.length})`, 14, y);
+  y += 6;
+  
+  if (hitos.length > 0) {
+    doc.autoTable({
+      startY: y,
+      head: [["Hito", "Estado", "Inicio", "Fin", "Responsable"]],
+      body: hitos.map(h => [h.hito, h.estado || "-", h.fechaInicio || "-", h.fechaFin || "-", h.responsable || "-"]),
+      theme: "striped",
+      headStyles: { fillColor: [99, 102, 241] },
+      styles: { fontSize: 9 }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  } else {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100);
+    doc.text("Sin hitos registrados", 14, y);
+    y += 10;
+    doc.setTextColor(0);
+  }
+  
+  // Acciones
+  if (y > 240) { doc.addPage(); y = 20; }
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(`✅ Acciones (${acciones.length})`, 14, y);
+  y += 6;
+  
+  if (acciones.length > 0) {
+    doc.autoTable({
+      startY: y,
+      head: [["Acción", "Estado", "Prioridad", "Responsable", "Fecha"]],
+      body: acciones.map(a => [a.accion, a.estado || "-", a.prioridad || "-", a.responsable || "-", a.fecha || "-"]),
+      theme: "striped",
+      headStyles: { fillColor: [34, 197, 94] },
+      styles: { fontSize: 9 }
+    });
+  }
+  
+  doc.save(`${proyecto.replace(/ /g,"_")}_${fechaArchivo()}.pdf`);
+  showToast("📥 PDF descargado");
+};
+
+window.generarInformePersona = function() {
+  const persona = document.getElementById("f-persona-informe").value;
+  if (!persona) {
+    showToast("⚠️ Selecciona una persona");
+    return;
+  }
+  
+  const doc = iniciarPDF(`Tareas de ${persona}`);
+  let y = 40;
+  
+  const hitos = STATE.hitos.filter(h => h.responsable === persona);
+  const acciones = STATE.acciones.filter(a => a.responsable === persona);
+  
+  // Stats
+  const atrasados = hitos.filter(h => h.estado === "Retrasado" || (h.fechaFin && daysDiff(h.fechaFin) < 0 && h.estado !== "Entregado"));
+  const pendientes = hitos.filter(h => h.estado !== "Entregado" && h.estado !== "Completado");
+  
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Hitos asignados: ${hitos.length} (${pendientes.length} pendientes, ${atrasados.length} atrasados)`, 14, y);
+  y += 6;
+  doc.text(`Acciones asignadas: ${acciones.length}`, 14, y);
+  y += 10;
+  
+  // Hitos
+  if (hitos.length > 0) {
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text(`🎯 Hitos`, 14, y);
+    y += 6;
+    
+    doc.autoTable({
+      startY: y,
+      head: [["Hito", "Proyecto", "Estado", "Fecha"]],
+      body: hitos.map(h => [h.hito, h.proyecto, h.estado || "-", h.fechaFin || "-"]),
+      theme: "striped",
+      headStyles: { fillColor: [99, 102, 241] },
+      styles: { fontSize: 9 }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+  
+  // Acciones
+  if (acciones.length > 0) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text(`✅ Acciones`, 14, y);
+    y += 6;
+    
+    doc.autoTable({
+      startY: y,
+      head: [["Acción", "Proyecto", "Estado", "Prioridad", "Fecha"]],
+      body: acciones.map(a => [a.accion, a.proyecto, a.estado || "-", a.prioridad || "-", a.fecha || "-"]),
+      theme: "striped",
+      headStyles: { fillColor: [34, 197, 94] },
+      styles: { fontSize: 9 }
+    });
+  }
+  
+  doc.save(`${persona.replace(/ /g,"_")}_${fechaArchivo()}.pdf`);
+  showToast("📥 PDF descargado");
+};
+
+window.generarInformeAtrasados = function() {
+  const doc = iniciarPDF("Hitos Críticos - Atrasados y En Riesgo");
+  let y = 40;
+  
+  const atrasados = STATE.hitos.filter(h => 
+    h.estado === "Retrasado" || (h.fechaFin && daysDiff(h.fechaFin) < 0 && h.estado !== "Entregado" && h.estado !== "Completado")
+  );
+  const enRiesgo = STATE.hitos.filter(h => h.estado === "En riesgo");
+  
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Total crítico: ${atrasados.length} atrasados, ${enRiesgo.length} en riesgo`, 14, y);
+  y += 10;
+  
+  if (atrasados.length > 0) {
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(185, 28, 28);
+    doc.text(`🔴 Atrasados (${atrasados.length})`, 14, y);
+    doc.setTextColor(0, 0, 0);
+    y += 6;
+    
+    doc.autoTable({
+      startY: y,
+      head: [["Hito", "Proyecto", "Fecha", "Responsable"]],
+      body: atrasados.map(h => [h.hito, h.proyecto, h.fechaFin || "-", h.responsable || "-"]),
+      theme: "striped",
+      headStyles: { fillColor: [239, 68, 68] },
+      styles: { fontSize: 9 }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+  
+  if (enRiesgo.length > 0) {
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(161, 98, 7);
+    doc.text(`🟡 En Riesgo (${enRiesgo.length})`, 14, y);
+    doc.setTextColor(0, 0, 0);
+    y += 6;
+    
+    doc.autoTable({
+      startY: y,
+      head: [["Hito", "Proyecto", "Fecha", "Responsable"]],
+      body: enRiesgo.map(h => [h.hito, h.proyecto, h.fechaFin || "-", h.responsable || "-"]),
+      theme: "striped",
+      headStyles: { fillColor: [234, 179, 8] },
+      styles: { fontSize: 9 }
+    });
+  }
+  
+  if (atrasados.length === 0 && enRiesgo.length === 0) {
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "italic");
+    doc.text("✨ ¡Excelente! No hay tareas críticas en este momento.", 14, y);
+  }
+  
+  doc.save(`Hitos_Criticos_${fechaArchivo()}.pdf`);
+  showToast("📥 PDF descargado");
+};
+
+function fechaArchivo() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+}
 
 // ══════════════════════════════════════════════════════
 // KPIs
