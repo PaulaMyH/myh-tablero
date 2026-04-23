@@ -321,7 +321,7 @@ const USUARIOS = {
   "José Halty": "myh2024"
 };
 
-// Lista de responsables del equipo (para selectores)
+// Lista base de responsables (se amplía con los que agregues en Admin)
 const RESPONSABLES = [
   "Paula Herrera",
   "Juan Pablo Torres",
@@ -330,6 +330,18 @@ const RESPONSABLES = [
   "Constanza Borquez",
   "Martin Diaz"
 ];
+
+// Lista dinámica de responsables desde Firebase
+function getResponsables() {
+  const fromState = (STATE.responsables || []).map(r => r.nombre);
+  return [...new Set([...RESPONSABLES, ...fromState])];
+}
+
+function responsablesOptions(selected = "") {
+  return `<option value="">Sin asignar</option>` + getResponsables().map(r =>
+    `<option value="${r}" ${r === selected ? "selected" : ""}>${r}</option>`
+  ).join("");
+}
 
 // Estados tipo semáforo
 const ESTADOS_HITO = ["A tiempo", "En riesgo", "Retrasado", "Entregado", "En curso", "Pendiente", "Completado"];
@@ -343,6 +355,7 @@ let STATE = {
   hitos: [],
   acciones: [],
   adminTareas: [],
+  responsables: [],
   filtroH: "todos",
   filtroA: "todos"
 };
@@ -363,14 +376,13 @@ function showSyncIndicator() {
 
 function saveToFirebase() {
   if (!STATE.user) return;
-  
   showSyncIndicator();
-  
   db.ref('tablero').set({
     proyectos: STATE.proyectos,
     hitos: STATE.hitos,
     acciones: STATE.acciones,
     adminTareas: STATE.adminTareas || [],
+    responsables: STATE.responsables || [],
     lastUpdate: Date.now(),
     lastUser: STATE.user
   }).catch(err => {
@@ -388,6 +400,7 @@ function loadFromFirebase() {
         STATE.hitos = data.hitos || [];
         STATE.acciones = data.acciones || [];
         STATE.adminTareas = data.adminTareas || [];
+        STATE.responsables = data.responsables || [];
       }
       resolve();
     });
@@ -765,8 +778,7 @@ window.openNuevoHito = function() {
     <div class="form-group">
       <label class="form-label">Responsable</label>
       <select class="form-select" id="f-responsable">
-        <option value="">Sin asignar</option>
-        ${RESPONSABLES.map(r => `<option value="${r}">${r}</option>`).join("")}
+        ${responsablesOptions()}
       </select>
     </div>
     <div class="form-group">
@@ -843,8 +855,7 @@ window.editarHito = function(id) {
     <div class="form-group">
       <label class="form-label">Responsable</label>
       <select class="form-select" id="f-responsable">
-        <option value="">Sin asignar</option>
-        ${RESPONSABLES.map(r => `<option value="${r}" ${r === h.responsable ? "selected" : ""}>${r}</option>`).join("")}
+        ${responsablesOptions(h.responsable)}
       </select>
     </div>
     <div class="form-group">
@@ -965,8 +976,7 @@ window.openNuevaAccion = function() {
     <div class="form-group">
       <label class="form-label">Responsable</label>
       <select class="form-select" id="f-responsable">
-        <option value="">Sin asignar</option>
-        ${RESPONSABLES.map(r => `<option value="${r}">${r}</option>`).join("")}
+        ${responsablesOptions()}
       </select>
     </div>
     <div class="form-group">
@@ -1047,8 +1057,7 @@ window.editarAccion = function(id) {
     <div class="form-group">
       <label class="form-label">Responsable</label>
       <select class="form-select" id="f-responsable">
-        <option value="">Sin asignar</option>
-        ${RESPONSABLES.map(r => `<option value="${r}" ${r === a.responsable ? "selected" : ""}>${r}</option>`).join("")}
+        ${responsablesOptions(a.responsable)}
       </select>
     </div>
     <div class="form-group">
@@ -1126,7 +1135,7 @@ function renderHoy() {
   
   // Resumen por responsable
   const porResponsable = {};
-  RESPONSABLES.forEach(r => {
+  getResponsables().forEach(r => {
     porResponsable[r] = {
       hitos: 0,
       atrasados: 0,
@@ -1242,7 +1251,7 @@ function renderHoy() {
       <div class="dashboard-title">
         👥 Carga del equipo
       </div>
-      ${RESPONSABLES.map(r => {
+      ${getResponsables().map(r => {
         const data = porResponsable[r];
         const total = data.hitos + data.acciones;
         if (total === 0) return "";
@@ -1276,7 +1285,7 @@ function renderHoy() {
 // ══════════════════════════════════════════════════════
 function renderEquipo() {
   const personas = {};
-  RESPONSABLES.forEach(r => {
+  getResponsables().forEach(r => {
     personas[r] = {
       hitos: [],
       acciones: []
@@ -1301,7 +1310,7 @@ function renderEquipo() {
       <div class="dashboard-hero-sub">Tareas asignadas a cada persona</div>
     </div>
     
-    ${RESPONSABLES.map(r => {
+    ${getResponsables().map(r => {
       const data = personas[r];
       const pendientes = data.hitos.filter(h => h.estado !== "Entregado" && h.estado !== "Completado");
       const atrasados = pendientes.filter(h => h.estado === "Retrasado" || (h.fechaFin && daysDiff(h.fechaFin) < 0));
@@ -1352,7 +1361,7 @@ function renderEquipo() {
 // ══════════════════════════════════════════════════════
 function renderInformes() {
   const proyectosOptions = STATE.proyectos.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join("");
-  const responsablesOptions = RESPONSABLES.map(r => `<option value="${r}">${r}</option>`).join("");
+  const respOptions = getResponsables().map(r => `<option value="${r}">${r}</option>`).join("");
   
   return `
     <div class="dashboard-hero">
@@ -1394,7 +1403,7 @@ function renderInformes() {
         <label class="form-label">Selecciona una persona</label>
         <select class="form-select" id="f-persona-informe">
           <option value="">-- Elegir --</option>
-          ${responsablesOptions}
+          ${respOptions}
         </select>
         <button class="btn-descargar" onclick="event.stopPropagation();generarInformePersona()">📥 Descargar PDF</button>
       </div>
@@ -1791,12 +1800,90 @@ function renderAdmin() {
       </div>
     </div>
   `).join("");
-  
+
+  const responsablesLista = (STATE.responsables || []).map(r => `
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px">
+      <div style="font-size:14px;font-weight:600">👤 ${r.nombre}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--sub)">${r.email || ""}</span>
+        <button onclick="eliminarResponsable('${r.id}')" style="background:var(--red-l);color:var(--red);border:none;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700">✕</button>
+      </div>
+    </div>
+  `).join("");
+
   return `
-    <button class="btn-add" onclick="openNuevaTareaAdmin()">➕ Nueva Tarea Admin</button>
-    ${tareas}
+    <!-- SECCIÓN RESPONSABLES -->
+    <div class="dashboard-section">
+      <div class="dashboard-title">👥 Equipo y Responsables</div>
+      <button class="btn-add" style="margin-bottom:12px" onclick="openNuevoResponsable()">➕ Agregar Responsable</button>
+      ${STATE.responsables && STATE.responsables.length > 0
+        ? responsablesLista
+        : `<div class="dashboard-empty">No hay responsables. Agrega los primeros.</div>`
+      }
+    </div>
+
+    <!-- SECCIÓN TAREAS ADMIN -->
+    <div class="dashboard-section" style="margin-top:24px">
+      <div class="dashboard-title">📋 Tareas Administrativas</div>
+      <button class="btn-add" style="margin-bottom:12px" onclick="openNuevaTareaAdmin()">➕ Nueva Tarea Admin</button>
+      ${tareas || `<div class="dashboard-empty">Sin tareas administrativas.</div>`}
+    </div>
   `;
 }
+
+// ── GESTIÓN DE RESPONSABLES ──────────────────────────
+window.openNuevoResponsable = function() {
+  openModal(`
+    <div class="modal-head">
+      <span class="modal-title">Agregar Responsable</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nombre completo</label>
+      <input class="form-input" id="f-resp-nombre" placeholder="Ej: María González"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email (opcional, para notificaciones)</label>
+      <input class="form-input" id="f-resp-email" placeholder="correo@ejemplo.com"/>
+    </div>
+    <button class="btn-primary" onclick="addResponsable()">➕ Agregar</button>
+  `);
+};
+
+window.addResponsable = function() {
+  const nombre = document.getElementById("f-resp-nombre").value.trim();
+  if (!nombre) { showToast("⚠️ Escribe un nombre"); return; }
+  
+  if (!STATE.responsables) STATE.responsables = [];
+  
+  // Verificar que no exista ya
+  if (STATE.responsables.find(r => r.nombre.toLowerCase() === nombre.toLowerCase())) {
+    showToast("⚠️ Ese responsable ya existe");
+    return;
+  }
+  
+  STATE.responsables.push({
+    id: "r" + Date.now(),
+    nombre,
+    email: document.getElementById("f-resp-email").value.trim()
+  });
+  
+  closeModal();
+  render();
+  saveToFirebase();
+  showToast(`✅ ${nombre} agregado al equipo`);
+};
+
+window.eliminarResponsable = function(id) {
+  const r = STATE.responsables.find(x => x.id === id);
+  if (!r) return;
+  if (!confirm(`¿Eliminar a ${r.nombre} del equipo?`)) return;
+  
+  STATE.responsables = STATE.responsables.filter(x => x.id !== id);
+  render();
+  saveToFirebase();
+  showToast("✅ Responsable eliminado");
+};
 
 window.openNuevaTareaAdmin = function() {
   openModal(`
