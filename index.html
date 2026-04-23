@@ -253,19 +253,6 @@
         <option value="Martín Díaz">Martín Díaz</option>
         <option value="José Halty">José Halty</option>
       </select>
-      <label class="login-label">Rol</label>
-      <div class="role-grid">
-        <button class="role-btn active" id="role-equipo" onclick="selectRole('equipo')">
-          <span class="role-icon">👷</span>
-          <div class="role-name">Equipo</div>
-          <div class="role-desc">Ver y editar</div>
-        </button>
-        <button class="role-btn" id="role-admin" onclick="selectRole('admin')">
-          <span class="role-icon">⚙️</span>
-          <div class="role-name">Admin</div>
-          <div class="role-desc">Gestión total</div>
-        </button>
-      </div>
       <label class="login-label">Contraseña</label>
       <input type="password" class="login-input" id="login-pass" placeholder="••••••••"/>
       <button class="login-btn" id="login-btn" onclick="login()">Entrar</button>
@@ -315,10 +302,11 @@ const db = firebase.database();
 // ══════════════════════════════════════════════════════
 // STATE & USUARIOS
 // ══════════════════════════════════════════════════════
+// Usuarios: { nombre: { pass, role } }
 const USUARIOS = {
-  "Paula Herrera": "myh2024admin",
-  "Martín Díaz": "myh2024",
-  "José Halty": "myh2024"
+  "Paula Herrera": { pass: "myh2024admin", role: "admin" },
+  "Martín Díaz":   { pass: "myh2024",     role: "equipo" },
+  "José Halty":    { pass: "myh2024",     role: "equipo" }
 };
 
 // Lista base de responsables (se amplía con los que agregues en Admin)
@@ -326,15 +314,15 @@ const RESPONSABLES = [
   "Paula Herrera",
   "Juan Pablo Torres",
   "Rodrigo Escobar",
-  "Carla Vergara",
-  "Constanza Borquez",
-  "Martin Diaz"
+  "Carla Vergara"
 ];
 
 // Lista dinámica de responsables desde Firebase
 function getResponsables() {
+  const excluidos = STATE.excluidos || [];
   const fromState = (STATE.responsables || []).map(r => r.nombre);
-  return [...new Set([...RESPONSABLES, ...fromState])];
+  const base = RESPONSABLES.filter(r => !excluidos.includes(r));
+  return [...new Set([...base, ...fromState.filter(r => !excluidos.includes(r))])];
 }
 
 function responsablesOptions(selected = "") {
@@ -356,6 +344,7 @@ let STATE = {
   acciones: [],
   adminTareas: [],
   responsables: [],
+  excluidos: [],
   filtroH: "todos",
   filtroA: "todos"
 };
@@ -383,6 +372,7 @@ function saveToFirebase() {
     acciones: STATE.acciones,
     adminTareas: STATE.adminTareas || [],
     responsables: STATE.responsables || [],
+    excluidos: STATE.excluidos || [],
     lastUpdate: Date.now(),
     lastUser: STATE.user
   }).catch(err => {
@@ -401,6 +391,7 @@ function loadFromFirebase() {
         STATE.acciones = data.acciones || [];
         STATE.adminTareas = data.adminTareas || [];
         STATE.responsables = data.responsables || [];
+        STATE.excluidos = data.excluidos || [];
       }
       resolve();
     });
@@ -426,19 +417,8 @@ function listenToFirebase() {
 // ══════════════════════════════════════════════════════
 // LOGIN
 // ══════════════════════════════════════════════════════
-let selectedRole = "equipo";
-
-window.selectRole = function(role) {
-  selectedRole = role;
-  document.querySelectorAll(".role-btn").forEach(b => {
-    b.classList.remove("active", "active-admin");
-  });
-  const btn = document.getElementById(`role-${role}`);
-  btn.classList.add(role === "admin" ? "active-admin" : "active");
-  
-  const loginBtn = document.getElementById("login-btn");
-  loginBtn.classList.toggle("admin-btn", role === "admin");
-};
+// Rol determinado automáticamente por usuario - no se selecciona manualmente
+let selectedRole = "equipo"; // fallback
 
 window.login = async function() {
   const user = document.getElementById("login-user").value;
@@ -450,17 +430,18 @@ window.login = async function() {
     return;
   }
   
-  if (pass !== USUARIOS[user]) {
+  if (pass !== USUARIOS[user].pass) {
     document.getElementById("login-error").style.display = "block";
     document.getElementById("login-error").textContent = "❌ Contraseña incorrecta";
     return;
   }
   
+  const role = USUARIOS[user].role;
   STATE.user = user;
-  STATE.role = selectedRole;
+  STATE.role = role;
   
   localStorage.setItem("myh-user", user);
-  localStorage.setItem("myh-role", selectedRole);
+  localStorage.setItem("myh-role", role);
   
   document.getElementById("login").style.display = "none";
   
@@ -1790,6 +1771,22 @@ function renderKPIs() {
 // ADMIN
 // ══════════════════════════════════════════════════════
 function renderAdmin() {
+  // Todos los responsables activos (base + Firebase, sin excluidos)
+  const todosResp = getResponsables();
+  
+  const responsablesLista = todosResp.map(nombre => {
+    const respObj = (STATE.responsables || []).find(r => r.nombre === nombre);
+    return `
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:8px">
+        <div>
+          <div style="font-size:14px;font-weight:600">👤 ${nombre}</div>
+          ${respObj?.email ? `<div style="font-size:11px;color:var(--sub);margin-top:2px">${respObj.email}</div>` : ""}
+        </div>
+        <button onclick="eliminarResponsable('${nombre}')" style="background:var(--red-l);color:var(--red);border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:700;white-space:nowrap">✕ Eliminar</button>
+      </div>
+    `;
+  }).join("");
+
   const tareas = (STATE.adminTareas || []).map(t => `
     <div class="card" onclick="editarTareaAdmin('${t.id}')">
       <div class="card-header">
@@ -1803,31 +1800,16 @@ function renderAdmin() {
     </div>
   `).join("");
 
-  const responsablesLista = (STATE.responsables || []).map(r => `
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px">
-      <div style="font-size:14px;font-weight:600">👤 ${r.nombre}</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <span style="font-size:11px;color:var(--sub)">${r.email || ""}</span>
-        <button onclick="eliminarResponsable('${r.id}')" style="background:var(--red-l);color:var(--red);border:none;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700">✕</button>
-      </div>
-    </div>
-  `).join("");
-
   return `
-    <!-- SECCIÓN RESPONSABLES -->
     <div class="dashboard-section">
-      <div class="dashboard-title">👥 Equipo y Responsables</div>
-      <button class="btn-add" style="margin-bottom:12px" onclick="openNuevoResponsable()">➕ Agregar Responsable</button>
-      ${STATE.responsables && STATE.responsables.length > 0
-        ? responsablesLista
-        : `<div class="dashboard-empty">No hay responsables. Agrega los primeros.</div>`
-      }
+      <div class="dashboard-title">👥 Equipo y Responsables <span style="font-size:11px;color:var(--sub);font-weight:400">${todosResp.length} personas</span></div>
+      <button class="btn-add" style="margin-bottom:14px" onclick="openNuevoResponsable()">➕ Agregar Responsable</button>
+      ${todosResp.length > 0 ? responsablesLista : `<div class="dashboard-empty">No hay responsables. Agrega los primeros.</div>`}
     </div>
 
-    <!-- SECCIÓN TAREAS ADMIN -->
-    <div class="dashboard-section" style="margin-top:24px">
-      <div class="dashboard-title">📋 Tareas Administrativas</div>
-      <button class="btn-add" style="margin-bottom:12px" onclick="openNuevaTareaAdmin()">➕ Nueva Tarea Admin</button>
+    <div class="dashboard-section" style="margin-top:28px">
+      <div class="dashboard-title">📋 Tareas Administrativas <span style="font-size:11px;color:var(--sub);font-weight:400">(solo visible para ti)</span></div>
+      <button class="btn-add" style="margin-bottom:14px" onclick="openNuevaTareaAdmin()">➕ Nueva Tarea Admin</button>
       ${tareas || `<div class="dashboard-empty">Sin tareas administrativas.</div>`}
     </div>
   `;
@@ -1876,15 +1858,21 @@ window.addResponsable = function() {
   showToast(`✅ ${nombre} agregado al equipo`);
 };
 
-window.eliminarResponsable = function(id) {
-  const r = STATE.responsables.find(x => x.id === id);
-  if (!r) return;
-  if (!confirm(`¿Eliminar a ${r.nombre} del equipo?`)) return;
+window.eliminarResponsable = function(nombre) {
+  if (!confirm(`¿Eliminar a ${nombre} del equipo?`)) return;
   
-  STATE.responsables = STATE.responsables.filter(x => x.id !== id);
+  // Si está en la lista base, lo agregamos a una lista de "excluidos"
+  if (!STATE.excluidos) STATE.excluidos = [];
+  if (!STATE.excluidos.includes(nombre)) {
+    STATE.excluidos.push(nombre);
+  }
+  
+  // Si también está en Firebase, lo eliminamos de ahí
+  STATE.responsables = (STATE.responsables || []).filter(r => r.nombre !== nombre);
+  
   render();
   saveToFirebase();
-  showToast("✅ Responsable eliminado");
+  showToast(`✅ ${nombre} eliminado del equipo`);
 };
 
 window.openNuevaTareaAdmin = function() {
@@ -2105,7 +2093,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     
     if (savedUser && USUARIOS[savedUser]) {
       STATE.user = savedUser;
-      STATE.role = savedRole || "equipo";
+      STATE.role = USUARIOS[savedUser].role || savedRole || "equipo";
       
       await loadFromFirebase();
       listenToFirebase();
