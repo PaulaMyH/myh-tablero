@@ -508,6 +508,8 @@ function renderHeader() {
       <div class="header-right">
         <div class="status-dot"></div>
         <div class="role-badge ${STATE.role}">${STATE.role === "admin" ? "Admin" : "Equipo"}</div>
+        <span style="font-size:12px;color:#94a3b8;margin-left:4px">${STATE.user.split(" ")[0]}</span>
+        <button onclick="cerrarSesion()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#94a3b8;padding:4px 10px;border-radius:8px;font-size:11px;cursor:pointer;font-weight:600;margin-left:4px">Salir</button>
       </div>
     </div>
     ${alertHTML}
@@ -2054,6 +2056,20 @@ function showToast(msg) {
   toast.style.display = "block";
   setTimeout(() => toast.style.display = "none", 3000);
 }
+
+window.cerrarSesion = function() {
+  if (!confirm("¿Cerrar sesión?")) return;
+  localStorage.removeItem("myh-user");
+  localStorage.removeItem("myh-role");
+  STATE.user = null;
+  STATE.role = "equipo";
+  db.ref('tablero').off(); // Detener escucha de Firebase
+  document.getElementById("main").style.display = "none";
+  document.getElementById("login").style.display = "flex";
+  document.getElementById("login-user").value = "";
+  document.getElementById("login-pass").value = "";
+  document.getElementById("login-error").style.display = "none";
+};
 
 window.switchTab = function(tab, el) {
   STATE.tab = tab;
