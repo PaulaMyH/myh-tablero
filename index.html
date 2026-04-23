@@ -251,8 +251,9 @@
       <select class="login-select" id="login-user">
         <option value="">Selecciona tu nombre</option>
         <option value="Paula Herrera">Paula Herrera</option>
-        <option value="Martín Díaz">Martín Díaz</option>
+        <option value="Claudio Leiva">Claudio Leiva</option>
         <option value="José Halty">José Halty</option>
+        <option value="Patricia Muñoz">Patricia Muñoz</option>
       </select>
       <label class="login-label">Contraseña</label>
       <input type="password" class="login-input" id="login-pass" placeholder="••••••••"/>
@@ -305,9 +306,10 @@ const db = firebase.database();
 // ══════════════════════════════════════════════════════
 // Usuarios: { nombre: { pass, role } }
 const USUARIOS = {
-  "Paula Herrera": { pass: "myh2024admin", role: "admin" },
-  "Martín Díaz":   { pass: "myh2024",     role: "equipo" },
-  "José Halty":    { pass: "myh2024",     role: "equipo" }
+  "Paula Herrera":   { pass: "myh2024admin", role: "admin" },
+  "Claudio Leiva":   { pass: "myh2024",      role: "equipo" },
+  "José Halty":      { pass: "myh2024",      role: "equipo" },
+  "Patricia Muñoz":  { pass: "myh2024",      role: "equipo" }
 };
 
 // Lista base de responsables (se amplía con los que agregues en Admin)
