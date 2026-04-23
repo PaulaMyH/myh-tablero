@@ -103,15 +103,16 @@
     .alert-chip{font-size:12px;color:#fca5a5}
 
     /* TABS */
-    #tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid var(--border);display:flex;z-index:20;box-shadow:0 -4px 20px rgba(0,0,0,.06)}
-    .tab-btn{flex:1;padding:10px 4px 12px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
-    .tab-icon{font-size:20px}
-    .tab-label{font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+    #tab-bar{position:fixed;bottom:0;left:0;right:0;width:100%;background:#fff;border-top:1px solid var(--border);display:flex;z-index:20;box-shadow:0 -4px 20px rgba(0,0,0,.06);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    #tab-bar::-webkit-scrollbar{display:none}
+    .tab-btn{flex:0 0 auto;min-width:64px;padding:8px 6px 10px;border:none;background:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+    .tab-icon{font-size:18px}
+    .tab-label{font-size:9px;font-weight:700;letter-spacing:.03em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
     .tab-btn.active .tab-label{color:var(--indigo)}
     .tab-btn.active::after{content:'';position:absolute;bottom:0;width:20px;height:3px;background:var(--indigo);border-radius:2px}
 
     /* CONTENT */
-    #content{padding:16px 14px 90px}
+    #content{padding:16px 14px 100px}
 
     /* KPIs */
     .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
