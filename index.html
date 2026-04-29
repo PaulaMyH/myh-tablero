@@ -218,7 +218,35 @@
     .form-textarea{resize:vertical;min-height:80px}
     .form-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     
-    /* TOAST */
+    /* GANTT */
+    .gantt-container{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .gantt-table{min-width:700px;width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+    .gantt-table th{background:#f8fafc;padding:8px 10px;font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap;text-align:center}
+    .gantt-table th.label-th{text-align:left;min-width:160px;max-width:180px}
+    .gantt-table td{padding:0;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+    .gantt-table tr:last-child td{border-bottom:none}
+    .gantt-label{padding:8px 10px;font-size:12px;color:var(--text);min-width:160px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gantt-label.proyecto{font-weight:700;font-size:13px;background:#f8fafc}
+    .gantt-label.hito-row{padding-left:22px;font-size:11px;color:var(--sub)}
+    .gantt-cell{width:100%;height:36px;position:relative;border-left:1px solid #f1f5f9}
+    .gantt-cell.proyecto{background:#f8fafc}
+    .gantt-bar{position:absolute;height:16px;top:10px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;min-width:8px}
+    .gantt-bar.proyecto-bar{height:20px;top:8px;opacity:.25;border-radius:6px}
+    .gantt-bar.a-tiempo{background:#dcfce7;color:#15803d}
+    .gantt-bar.en-riesgo{background:#fef9c3;color:#a16207}
+    .gantt-bar.retrasado{background:#fee2e2;color:#b91c1c}
+    .gantt-bar.entregado{background:#dbeafe;color:#1e40af}
+    .gantt-bar.pendiente{background:#f1f5f9;color:#64748b}
+    .gantt-bar.en-curso{background:#dbeafe;color:#1e40af}
+    .gantt-bar.completado{background:#dcfce7;color:#15803d}
+    .gantt-bar.proyecto-span{background:#6366f1}
+    .gantt-today{position:absolute;top:0;bottom:0;width:2px;background:#ef4444;opacity:.7;z-index:2}
+    .gantt-toggle{display:flex;gap:8px;margin-bottom:14px}
+    .gantt-toggle button{padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer}
+    .gantt-toggle button.active{background:var(--indigo);color:#fff;border-color:var(--indigo)}
+    .gantt-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    .gantt-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--sub)}
+    .gantt-legend-dot{width:10px;height:10px;border-radius:3px}
     .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:200;display:none}
     
     /* LOADING */
@@ -506,6 +534,7 @@ function renderTabs() {
     { id: "proyectos", icon: "🏗️", label: "Proyectos" },
     { id: "hitos", icon: "🎯", label: "Hitos" },
     { id: "acciones", icon: "✅", label: "Acciones" },
+    { id: "gantt", icon: "📅", label: "Gantt" },
     { id: "equipo", icon: "👥", label: "Equipo" },
     { id: "kpis", icon: "📊", label: "KPIs" },
     { id: "informes", icon: "📄", label: "Informes" }
@@ -530,6 +559,7 @@ function renderContent() {
   else if (STATE.tab === "proyectos") c.innerHTML = renderProyectos();
   else if (STATE.tab === "hitos") c.innerHTML = renderHitos();
   else if (STATE.tab === "acciones") c.innerHTML = renderAcciones();
+  else if (STATE.tab === "gantt") c.innerHTML = renderGantt();
   else if (STATE.tab === "equipo") c.innerHTML = renderEquipo();
   else if (STATE.tab === "kpis") c.innerHTML = renderKPIs();
   else if (STATE.tab === "informes") c.innerHTML = renderInformes();
@@ -1312,8 +1342,167 @@ function renderHoy() {
 }
 
 // ══════════════════════════════════════════════════════
-// VISTA "EQUIPO" - Resumen por persona
+// GANTT - Vista tipo C: Proyectos con hitos
 // ══════════════════════════════════════════════════════
+function renderGantt() {
+  // Calcular rango de fechas
+  const toDate = str => {
+    if (!str) return null;
+    const p = str.split("/");
+    if (p.length !== 3) return null;
+    return new Date(p[2], p[1]-1, p[0]);
+  };
+
+  const hoy = new Date();
+  hoy.setHours(0,0,0,0);
+
+  // Vista mensual o semanal
+  const vista = STATE.ganttVista || "mensual";
+  
+  // Calcular inicio y fin del rango visible
+  let rangeStart, rangeEnd;
+  if (vista === "mensual") {
+    rangeStart = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    rangeEnd   = new Date(hoy.getFullYear(), hoy.getMonth() + 5, 0);
+  } else {
+    rangeStart = new Date(hoy);
+    rangeStart.setDate(hoy.getDate() - 7);
+    rangeEnd = new Date(hoy);
+    rangeEnd.setDate(hoy.getDate() + 21);
+  }
+
+  const totalDays = Math.ceil((rangeEnd - rangeStart) / 86400000);
+
+  // Función para calcular posición % dentro del rango
+  const pct = date => {
+    if (!date) return null;
+    const d = Math.max(0, Math.min(totalDays, Math.ceil((date - rangeStart) / 86400000)));
+    return (d / totalDays * 100).toFixed(2);
+  };
+
+  // Columnas de tiempo
+  let cols = [];
+  if (vista === "mensual") {
+    const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    let cur = new Date(rangeStart);
+    while (cur <= rangeEnd) {
+      const dias = new Date(cur.getFullYear(), cur.getMonth()+1, 0).getDate();
+      cols.push({ label: meses[cur.getMonth()], pct: (dias/totalDays*100).toFixed(1) });
+      cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+    }
+  } else {
+    let cur = new Date(rangeStart);
+    while (cur <= rangeEnd) {
+      const d = cur.getDate();
+      const m = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"][cur.getMonth()];
+      cols.push({ label: `${d} ${m}`, pct: (7/totalDays*100).toFixed(1) });
+      cur.setDate(cur.getDate()+7);
+    }
+  }
+
+  // Línea de hoy
+  const todayPct = pct(hoy);
+
+  // Filas: proyecto + hitos
+  let rows = "";
+  STATE.proyectos.forEach(p => {
+    const hitos = STATE.hitos.filter(h => h.proyecto === p.nombre);
+    
+    // Calcular span total del proyecto
+    let pMin = null, pMax = null;
+    hitos.forEach(h => {
+      const ini = toDate(h.fechaInicio);
+      const fin = toDate(h.fechaFin);
+      if (ini && (!pMin || ini < pMin)) pMin = ini;
+      if (fin && (!pMax || fin > pMax)) pMax = fin;
+    });
+
+    const spanLeft = pMin ? pct(pMin) : null;
+    const spanWidth = (pMin && pMax) ? (pct(pMax) - spanLeft).toFixed(2) : null;
+
+    // Fila del proyecto
+    rows += `
+      <tr>
+        <td class="gantt-label proyecto">🏗️ ${p.nombre}</td>
+        <td style="position:relative;padding:0">
+          <div class="gantt-cell proyecto">
+            ${spanLeft !== null ? `<div class="gantt-bar proyecto-span" style="left:${spanLeft}%;width:${spanWidth}%;"></div>` : ""}
+            ${todayPct ? `<div class="gantt-today" style="left:${todayPct}%"></div>` : ""}
+          </div>
+        </td>
+      </tr>`;
+
+    // Filas de hitos
+    hitos.forEach(h => {
+      const ini  = toDate(h.fechaInicio);
+      const fin  = toDate(h.fechaFin);
+      const left = ini ? pct(ini) : (fin ? pct(fin) : null);
+      const w    = (ini && fin) ? Math.max(1, pct(fin) - pct(ini)) : 3;
+      const est  = (h.estado||"pendiente").toLowerCase().replace(/ /g,"-");
+      const icon = est==="completado"||est==="entregado" ? "✅" : est==="retrasado" ? "🔴" : est==="en-riesgo" ? "🟡" : est==="a-tiempo" ? "🟢" : "⬜";
+      const label = w > 10 ? h.hito.substring(0,20) : "";
+
+      rows += `
+        <tr onclick="editarHito('${h.id}')">
+          <td class="gantt-label hito-row">↳ ${h.hito}</td>
+          <td style="position:relative;padding:0;cursor:pointer">
+            <div class="gantt-cell">
+              ${left !== null ? `<div class="gantt-bar ${est}" style="left:${left}%;width:${w}%">${icon} ${label}</div>` : ""}
+              ${todayPct ? `<div class="gantt-today" style="left:${todayPct}%"></div>` : ""}
+            </div>
+          </td>
+        </tr>`;
+    });
+
+    if (hitos.length === 0) {
+      rows += `
+        <tr>
+          <td class="gantt-label hito-row" style="color:var(--muted);font-style:italic">Sin hitos</td>
+          <td><div class="gantt-cell"></div></td>
+        </tr>`;
+    }
+  });
+
+  if (STATE.proyectos.length === 0) {
+    return `<div class="dashboard-empty">No hay proyectos. Agrega proyectos primero.</div>`;
+  }
+
+  return `
+    <div class="gantt-toggle">
+      <button class="${vista==="mensual"?"active":""}" onclick="setGanttVista('mensual')">Vista mensual</button>
+      <button class="${vista==="semanal"?"active":""}" onclick="setGanttVista('semanal')">Vista semanal</button>
+    </div>
+    
+    <div class="gantt-legend">
+      <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:#dcfce7;border:1px solid #86efac"></div>A tiempo / Completado</div>
+      <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:#fef9c3;border:1px solid #fde047"></div>En riesgo</div>
+      <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:#fee2e2;border:1px solid #fca5a5"></div>Retrasado</div>
+      <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:#dbeafe;border:1px solid #93c5fd"></div>En curso</div>
+      <div class="gantt-legend-item"><div class="gantt-legend-dot" style="background:#ef4444"></div>Hoy</div>
+    </div>
+
+    <div class="gantt-container">
+      <table class="gantt-table">
+        <thead>
+          <tr>
+            <th class="label-th">Proyecto / Hito</th>
+            <th style="padding:0">
+              <div style="display:flex;width:100%">
+                ${cols.map(c => `<div style="flex:0 0 ${c.pct}%;text-align:center;padding:8px 4px;border-left:1px solid var(--border);font-size:10px;font-weight:700;color:var(--sub)">${c.label}</div>`).join("")}
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+window.setGanttVista = function(vista) {
+  STATE.ganttVista = vista;
+  render();
+};
 function renderEquipo() {
   const personas = {};
   getResponsables().forEach(r => {
