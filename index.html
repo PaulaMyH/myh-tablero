@@ -910,6 +910,7 @@ function renderAcciones() {
       </div>
       <div class="card-meta">
         <span>📁 ${a.proyecto}</span>
+        ${a.hito ? `<span>🎯 ${a.hito}</span>` : ""}
         ${a.prioridad ? `<span class="badge ${a.prioridad.toLowerCase()}">${a.prioridad}</span>` : ""}
         ${a.responsable ? `<span>👤 ${a.responsable}</span>` : ""}
         ${a.fecha ? `<span>📅 ${a.fecha}</span>` : ""}
@@ -927,6 +928,12 @@ function renderAcciones() {
 window.openNuevaAccion = function() {
   const proyectos = STATE.proyectos.map(p => `<option>${p.nombre}</option>`).join("");
   
+  const primerProyecto = STATE.proyectos[0]?.nombre || "";
+  const hitosDelPrimer = STATE.hitos
+    .filter(h => h.proyecto === primerProyecto)
+    .map(h => `<option value="${h.id}">${h.hito}</option>`)
+    .join("");
+
   openModal(`
     <div class="modal-head">
       <span class="modal-title">Nueva Acción</span>
@@ -938,7 +945,14 @@ window.openNuevaAccion = function() {
     </div>
     <div class="form-group">
       <label class="form-label">Proyecto</label>
-      <select class="form-select" id="f-proyecto">${proyectos}</select>
+      <select class="form-select" id="f-proyecto" onchange="filtrarHitosPorProyecto(this.value)">${proyectos}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hito relacionado</label>
+      <select class="form-select" id="f-hito">
+        <option value="">Sin hito</option>
+        ${hitosDelPrimer}
+      </select>
     </div>
     <div class="form-row2">
       <div class="form-group">
@@ -977,24 +991,38 @@ window.openNuevaAccion = function() {
   `);
 };
 
+// Filtra hitos cuando cambia el proyecto en el formulario de acción
+window.filtrarHitosPorProyecto = function(proyecto) {
+  const select = document.getElementById("f-hito");
+  if (!select) return;
+  const hitos = STATE.hitos.filter(h => h.proyecto === proyecto);
+  select.innerHTML = `<option value="">Sin hito</option>` +
+    hitos.map(h => `<option value="${h.id}">${h.hito}</option>`).join("");
+};
+
 window.addAccion = function() {
   const accion = document.getElementById("f-accion").value.trim();
   if (!accion) {
     showToast("⚠️ Escribe una descripción");
     return;
   }
-  
+
+  const hitoId = document.getElementById("f-hito")?.value || "";
+  const hitoObj = STATE.hitos.find(h => h.id === hitoId);
+
   STATE.acciones.push({
     id: "a" + Date.now(),
     accion,
     proyecto: document.getElementById("f-proyecto").value,
+    hitoId: hitoId,
+    hito: hitoObj?.hito || "",
     estado: document.getElementById("f-estado").value,
     prioridad: document.getElementById("f-prioridad").value,
     responsable: document.getElementById("f-responsable").value,
     fecha: document.getElementById("f-fecha").value,
     comentario: document.getElementById("f-comentario").value
   });
-  
+
   closeModal();
   render();
   saveToFirebase();
@@ -1008,6 +1036,11 @@ window.editarAccion = function(id) {
   const proyectos = STATE.proyectos.map(p =>
     `<option ${p.nombre === a.proyecto ? "selected" : ""}>${p.nombre}</option>`
   ).join("");
+
+  const hitosDelProyecto = STATE.hitos
+    .filter(h => h.proyecto === a.proyecto)
+    .map(h => `<option value="${h.id}" ${h.id === a.hitoId ? "selected" : ""}>${h.hito}</option>`)
+    .join("");
   
   const estados = ["Pendiente", "En curso", "Bloqueada", "Completada"].map(e =>
     `<option ${e === a.estado ? "selected" : ""}>${e}</option>`
@@ -1028,7 +1061,14 @@ window.editarAccion = function(id) {
     </div>
     <div class="form-group">
       <label class="form-label">Proyecto</label>
-      <select class="form-select" id="f-proyecto">${proyectos}</select>
+      <select class="form-select" id="f-proyecto" onchange="filtrarHitosPorProyecto(this.value)">${proyectos}</select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hito relacionado</label>
+      <select class="form-select" id="f-hito">
+        <option value="">Sin hito</option>
+        ${hitosDelProyecto}
+      </select>
     </div>
     <div class="form-row2">
       <div class="form-group">
@@ -1062,11 +1102,16 @@ window.editarAccion = function(id) {
 window.saveAccion = function(id) {
   const i = STATE.acciones.findIndex(x => x.id === id);
   if (i < 0) return;
+
+  const hitoId = document.getElementById("f-hito")?.value || "";
+  const hitoObj = STATE.hitos.find(h => h.id === hitoId);
   
   STATE.acciones[i] = {
     ...STATE.acciones[i],
     accion: document.getElementById("f-accion").value,
     proyecto: document.getElementById("f-proyecto").value,
+    hitoId: hitoId,
+    hito: hitoObj?.hito || "",
     estado: document.getElementById("f-estado").value,
     prioridad: document.getElementById("f-prioridad").value,
     responsable: document.getElementById("f-responsable").value,
